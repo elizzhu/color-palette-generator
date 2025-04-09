@@ -1,0 +1,80 @@
+/* Custom styles that complement Tailwind */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+/* Smooth transitions */
+input, textarea, button {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Custom focus styles */
+input:focus, textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Custom styles that complement Tailwind */
+.color-swatch {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+.color-swatch:hover {
+    transform: translateY(-2px);
+}
+
+.color-preview {
+    height: 120px;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.color-info {
+    background: white;
+    padding: 0.75rem;
+    border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.lock-icon {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.lock-icon:hover {
+    background: white;
+}
+
+.lock-icon.locked {
+    color: #4F46E5;
+}
+
+/* Toast animation */
+.toast-visible {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+} 
