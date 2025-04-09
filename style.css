@@ -34,24 +34,28 @@ input:focus, textarea:focus {
 
 /* Custom styles that complement Tailwind */
 .color-swatch {
-    position: relative;
+    background: #3D3B47;
+    border-radius: 1rem;
     overflow: hidden;
     transition: all 0.3s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .color-swatch:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
 }
 
 .color-preview {
-    height: 120px;
-    border-radius: 0.5rem 0.5rem 0 0;
+    height: 180px;
+    border-radius: 1rem 1rem 0 0;
+    position: relative;
 }
 
 .color-info {
-    background: white;
-    padding: 0.75rem;
-    border-radius: 0 0 0.5rem 0.5rem;
+    background: #3D3B47;
+    padding: 1rem;
+    border-radius: 0 0 1rem 1rem;
 }
 
 .lock-icon {
@@ -73,8 +77,66 @@ input:focus, textarea:focus {
     color: #4F46E5;
 }
 
+/* Action buttons */
+.action-buttons {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-button {
+    background: rgba(255, 255, 255, 0.9);
+    color: #2D2B37;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.action-button:hover {
+    background: white;
+    transform: scale(1.05);
+}
+
+.action-button.active {
+    background: #E9967A;
+    color: white;
+}
+
+/* Color code display */
+.color-code {
+    font-family: 'Inter', monospace;
+    font-size: 0.875rem;
+    color: #E9967A;
+    font-weight: 500;
+}
+
 /* Toast animation */
 .toast-visible {
     transform: translateY(0) !important;
     opacity: 1 !important;
+}
+
+/* Input styles */
+input::placeholder {
+    color: #6D6B77;
+}
+
+/* Focus styles */
+.focus-ring {
+    outline: none;
+    box-shadow: 0 0 0 2px #E9967A;
+}
+
+/* Base styles */
+body {
+    background-color: #2D2B37;
+    color: white;
 } 
