@@ -3,6 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const colorInput = document.querySelector('input[placeholder="Enter color code"]');
     const paletteContainer = document.getElementById('palette');
     const toast = document.getElementById('toast');
+    const dropZone = document.getElementById('dropZone');
+    const imageUpload = document.getElementById('imageUpload');
+    const imagePreview = document.getElementById('imagePreview');
+    const preview = document.getElementById('preview');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const extractBtn = document.getElementById('extractBtn');
 
     // Color name generator
     const colorNames = [
@@ -10,6 +16,136 @@ document.addEventListener('DOMContentLoaded', () => {
         'Meadow', 'Coral', 'Sand', 'Mist', 'Dawn', 'Dusk',
         'Peach', 'Lavender', 'Sage', 'Amber', 'Ruby', 'Emerald'
     ];
+
+    // Handle drag and drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+        dropZone.classList.add('border-[#E9967A]');
+    }
+
+    function unhighlight(e) {
+        dropZone.classList.remove('border-[#E9967A]');
+    }
+
+    // Handle file selection
+    dropZone.addEventListener('click', () => {
+        imageUpload.click();
+    });
+
+    imageUpload.addEventListener('change', handleFileSelect);
+    dropZone.addEventListener('drop', handleDrop);
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleFiles(files);
+    }
+
+    function handleFileSelect(e) {
+        const files = e.target.files;
+        handleFiles(files);
+    }
+
+    function handleFiles(files) {
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                return;
+            }
+            if (!file.type.match('image.*')) {
+                alert('Please upload an image file');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                preview.classList.remove('hidden');
+                uploadPrompt.classList.add('hidden');
+                extractBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Extract colors from image
+    function extractColors(imageElement) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = imageElement.naturalWidth;
+            canvas.height = imageElement.naturalHeight;
+            ctx.drawImage(imageElement, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const colorMap = new Map();
+            const skipPixels = 10; // Sample every 10th pixel for performance
+
+            for (let i = 0; i < imageData.length; i += 4 * skipPixels) {
+                const r = imageData[i];
+                const g = imageData[i + 1];
+                const b = imageData[i + 2];
+                const rgb = `${r},${g},${b}`;
+                colorMap.set(rgb, (colorMap.get(rgb) || 0) + 1);
+            }
+
+            // Convert to array and sort by frequency
+            const sortedColors = Array.from(colorMap.entries())
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6)
+                .map(([rgb]) => {
+                    const [r, g, b] = rgb.split(',').map(Number);
+                    return rgbToHsl(r, g, b);
+                });
+
+            resolve(sortedColors);
+        });
+    }
+
+    // RGB to HSL conversion
+    function rgbToHsl(r, g, b) {
+        r /= 255;
+        g /= 255;
+        b /= 255;
+
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+
+            h /= 6;
+        }
+
+        return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+    }
 
     // Generate random color based on input or random
     function generateColor(baseColor = null) {
@@ -40,14 +176,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return `#${f(0)}${f(8)}${f(4)}`;
     }
 
-    // Generate new palette
-    function generatePalette() {
-        const baseColor = colorInput.value.trim();
+    // Generate palette from colors array
+    function generatePaletteFromColors(colors) {
         paletteContainer.innerHTML = '';
-        const numColors = 6;
-
-        for (let i = 0; i < numColors; i++) {
-            const color = generateColor(baseColor);
+        
+        colors.forEach((color, index) => {
             const hex = hslToHex(color);
             const name = colorNames[Math.floor(Math.random() * colorNames.length)];
             
@@ -66,11 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
                             </svg>
                         </button>
-                        <button class="action-button lock-btn" aria-label="Lock color">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                            </svg>
-                        </button>
                     </div>
                 </div>
                 <div class="color-info">
@@ -82,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             paletteContainer.appendChild(swatch);
-        }
+        });
 
         // Add event listeners
         document.querySelectorAll('.save-btn').forEach(btn => {
@@ -100,13 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast();
             });
         });
+    }
 
-        document.querySelectorAll('.lock-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                btn.classList.toggle('active');
-            });
-        });
+    // Generate new palette
+    function generatePalette() {
+        const baseColor = colorInput.value.trim();
+        const colors = Array(6).fill().map(() => generateColor(baseColor));
+        generatePaletteFromColors(colors);
     }
 
     // Show toast notification
@@ -122,6 +250,30 @@ document.addEventListener('DOMContentLoaded', () => {
     colorInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             generatePalette();
+        }
+    });
+
+    extractBtn.addEventListener('click', async () => {
+        if (imagePreview.src) {
+            extractBtn.disabled = true;
+            extractBtn.innerHTML = `
+                <span>Extracting...</span>
+                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            `;
+            
+            const colors = await extractColors(imagePreview);
+            generatePaletteFromColors(colors);
+            
+            extractBtn.disabled = false;
+            extractBtn.innerHTML = `
+                <span>Extract Colors</span>
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                </svg>
+            `;
         }
     });
 

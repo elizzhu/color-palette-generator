@@ -44,22 +44,56 @@
                 <span class="text-[#E9967A]">Generate and create perfect</span>
                 <span class="text-white block mt-2">Color Palettes</span>
             </h2>
-            <p class="text-gray-400 mb-12 max-w-2xl">Create beautiful color combinations for your designs. Enter a color to start or choose from predefined themes.</p>
+            <p class="text-gray-400 mb-12 max-w-2xl">Create beautiful color combinations for your designs. Enter a color, upload an image, or choose from predefined themes.</p>
 
-            <div class="flex items-center space-x-4 mb-16">
-                <div class="relative">
-                    <span class="absolute left-3 top-3 text-gray-400">#</span>
-                    <input type="text" 
-                           placeholder="Enter color code" 
-                           class="bg-[#3D3B47] text-white pl-8 pr-4 py-2 rounded-lg w-48 focus:outline-none focus:ring-2 focus:ring-[#E9967A] focus:ring-opacity-50">
+            <div class="flex flex-col space-y-6 mb-16">
+                <!-- Color Input -->
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <span class="absolute left-3 top-3 text-gray-400">#</span>
+                        <input type="text" 
+                               placeholder="Enter color code" 
+                               class="bg-[#3D3B47] text-white pl-8 pr-4 py-2 rounded-lg w-48 focus:outline-none focus:ring-2 focus:ring-[#E9967A] focus:ring-opacity-50">
+                    </div>
+                    <button id="generateBtn" 
+                            class="bg-[#E9967A] text-white px-6 py-2 rounded-lg hover:bg-[#E8876A] transition-all duration-300 flex items-center space-x-2">
+                        <span>Generate</span>
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                    </button>
                 </div>
-                <button id="generateBtn" 
-                        class="bg-[#E9967A] text-white px-6 py-2 rounded-lg hover:bg-[#E8876A] transition-all duration-300 flex items-center space-x-2">
-                    <span>Generate</span>
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                    </svg>
-                </button>
+
+                <!-- Image Upload -->
+                <div class="flex items-start space-x-4">
+                    <div class="relative bg-[#3D3B47] rounded-lg p-4 w-full max-w-xl">
+                        <input type="file" 
+                               id="imageUpload" 
+                               accept="image/*" 
+                               class="hidden">
+                        <div id="dropZone" 
+                             class="border-2 border-dashed border-gray-500 rounded-lg p-8 text-center cursor-pointer hover:border-[#E9967A] transition-all duration-300">
+                            <div id="preview" class="hidden mb-4">
+                                <img id="imagePreview" class="max-h-48 mx-auto rounded-lg" alt="Upload preview">
+                            </div>
+                            <div id="uploadPrompt" class="space-y-2">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="text-gray-300">Drag and drop an image here, or click to select</p>
+                                <p class="text-gray-500 text-sm">Supports PNG, JPG up to 5MB</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="extractBtn" 
+                            class="bg-[#3D3B47] text-gray-300 px-6 py-2 rounded-lg hover:bg-[#4D4B57] transition-all duration-300 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>
+                        <span>Extract Colors</span>
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- Color Palette Grid -->
