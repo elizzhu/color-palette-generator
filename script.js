@@ -472,15 +472,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Generate brand insights
     function generateBrandInsights(colors) {
-        const brandInsights = document.getElementById('brandInsights');
-        if (!brandInsights) return;
+        if (!colors || !Array.isArray(colors)) {
+            // Handle null or invalid colors
+            const defaultInsights = [
+                {
+                    title: 'Color Analysis',
+                    description: 'Unable to analyze colors. Using industry-standard recommendations.'
+                },
+                {
+                    title: 'Brand Personality',
+                    description: 'Professional and reliable brand presence'
+                },
+                {
+                    title: 'Visual Impact',
+                    description: 'Balanced and accessible design approach'
+                },
+                {
+                    title: 'Industry Alignment',
+                    description: 'Versatile design suitable for various industries'
+                }
+            ];
 
-        if (!colors || !Array.isArray(colors) || colors.length === 0) {
-            brandInsights.innerHTML = `
-                <div class="bg-[#1A1A1A] rounded-lg p-4 text-center">
-                    <p class="text-gray-400">Unable to generate brand insights due to insufficient color data.</p>
+            brandInsights.innerHTML = defaultInsights.map(insight => `
+                <div class="bg-[#1A1A1A] rounded-lg p-4">
+                    <h4 class="font-semibold mb-2">${insight.title}</h4>
+                    <p class="text-gray-400 text-sm">${insight.description}</p>
                 </div>
-            `;
+            `).join('');
             return;
         }
 
@@ -534,46 +552,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Color analysis functions
     function analyzeColorHarmony(colors) {
-        const hues = colors.map(color => {
-            const match = color.match(/hsl\((\d+)/);
-            return match ? parseInt(match[1]) : 0;
-        });
+        if (!colors || !Array.isArray(colors) || colors.length === 0) {
+            return "Color harmony analysis not available";
+        }
 
-        const huesDiff = Math.abs(Math.max(...hues) - Math.min(...hues));
-        
-        if (huesDiff < 30) return "Monochromatic harmony - creates a sophisticated and cohesive look";
-        if (huesDiff > 150) return "Complementary harmony - creates strong contrast and visual interest";
-        return "Analogous harmony - creates a harmonious and balanced feel";
+        try {
+            const hues = colors.map(color => {
+                const match = color.match(/hsl\((\d+)/);
+                return match ? parseInt(match[1]) : 0;
+            }).filter(hue => !isNaN(hue));
+
+            if (hues.length < 2) {
+                return "Insufficient color data for harmony analysis";
+            }
+
+            const huesDiff = Math.abs(Math.max(...hues) - Math.min(...hues));
+            
+            if (huesDiff < 30) return "Monochromatic harmony - creates a sophisticated and cohesive look";
+            if (huesDiff > 150) return "Complementary harmony - creates strong contrast and visual interest";
+            return "Analogous harmony - creates a harmonious and balanced feel";
+        } catch (error) {
+            console.error('Error in analyzeColorHarmony:', error);
+            return "Color harmony analysis not available";
+        }
     }
 
     function analyzeBrandPersonality(colors) {
-        const personalities = {
-            warm: ["Friendly", "Energetic", "Approachable"],
-            cool: ["Professional", "Trustworthy", "Calm"],
-            bright: ["Dynamic", "Innovative", "Bold"],
-            muted: ["Sophisticated", "Traditional", "Reliable"]
-        };
+        if (!colors || !Array.isArray(colors) || colors.length === 0) {
+            return "Professional and reliable brand presence";
+        }
 
-        const avgSaturation = colors.reduce((sum, color) => {
-            const match = color.match(/hsl\(\d+,\s*(\d+)%/);
-            return sum + (match ? parseInt(match[1]) : 0);
-        }, 0) / colors.length;
+        try {
+            const personalities = {
+                warm: ["Friendly", "Energetic", "Approachable"],
+                cool: ["Professional", "Trustworthy", "Calm"],
+                bright: ["Dynamic", "Innovative", "Bold"],
+                muted: ["Sophisticated", "Traditional", "Reliable"]
+            };
 
-        if (avgSaturation > 60) return personalities.bright.join(", ");
-        if (avgSaturation > 40) return personalities.warm.join(", ");
-        if (avgSaturation > 20) return personalities.cool.join(", ");
-        return personalities.muted.join(", ");
+            const validColors = colors.filter(color => color && typeof color === 'string');
+            if (validColors.length === 0) {
+                return "Professional and balanced brand personality";
+            }
+
+            const avgSaturation = validColors.reduce((sum, color) => {
+                const match = color.match(/hsl\(\d+,\s*(\d+)%/);
+                return sum + (match ? parseInt(match[1]) : 0);
+            }, 0) / validColors.length;
+
+            if (avgSaturation > 60) return personalities.bright.join(", ");
+            if (avgSaturation > 40) return personalities.warm.join(", ");
+            if (avgSaturation > 20) return personalities.cool.join(", ");
+            return personalities.muted.join(", ");
+        } catch (error) {
+            console.error('Error in analyzeBrandPersonality:', error);
+            return "Professional and balanced brand personality";
+        }
     }
 
     function analyzeVisualImpact(colors) {
-        const avgLightness = colors.reduce((sum, color) => {
-            const match = color.match(/hsl\(\d+,\s*\d+%,\s*(\d+)%/);
-            return sum + (match ? parseInt(match[1]) : 0);
-        }, 0) / colors.length;
+        if (!colors || !Array.isArray(colors) || colors.length === 0) {
+            return "Balanced visual impact suitable for professional use";
+        }
 
-        if (avgLightness > 70) return "Light and airy - creates an open, modern feel";
-        if (avgLightness < 30) return "Dark and bold - creates a premium, dramatic feel";
-        return "Balanced contrast - creates a professional, readable feel";
+        try {
+            const validColors = colors.filter(color => color && typeof color === 'string');
+            if (validColors.length === 0) {
+                return "Balanced visual impact suitable for professional use";
+            }
+
+            const avgLightness = validColors.reduce((sum, color) => {
+                const match = color.match(/hsl\(\d+,\s*\d+%,\s*(\d+)%/);
+                return sum + (match ? parseInt(match[1]) : 50);
+            }, 0) / validColors.length;
+
+            if (avgLightness > 70) return "Light and airy - creates an open, modern feel";
+            if (avgLightness < 30) return "Dark and bold - creates a premium, dramatic feel";
+            return "Balanced contrast - creates a professional, readable feel";
+        } catch (error) {
+            console.error('Error in analyzeVisualImpact:', error);
+            return "Balanced visual impact suitable for professional use";
+        }
     }
 
     function analyzeIndustryAlignment(colors) {
