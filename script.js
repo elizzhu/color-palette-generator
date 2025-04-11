@@ -275,19 +275,27 @@ document.addEventListener('DOMContentLoaded', () => {
             // Generate palette
             const palette = document.getElementById('palette');
             if (palette) {
-                palette.innerHTML = colors.map(color => `
-                    <div class="color-swatch h-24 rounded-lg cursor-pointer" style="background-color: ${color}" data-color="${color}"></div>
-                `).join('');
-                
-                // Add click event to copy colors
-                document.querySelectorAll('.color-swatch').forEach(swatch => {
-                    swatch.addEventListener('click', function() {
-                        const color = this.getAttribute('data-color');
-                        navigator.clipboard.writeText(color).then(() => {
-                            showToast();
+                if (colors === null) {
+                    palette.innerHTML = `
+                        <div class="bg-[#1A1A1A] rounded-lg p-4 text-center">
+                            <p class="text-gray-400">Unable to extract brand colors. The available images don't contain enough distinct, high-quality colors to generate a meaningful palette.</p>
+                        </div>
+                    `;
+                } else {
+                    palette.innerHTML = colors.map(color => `
+                        <div class="color-swatch h-24 rounded-lg cursor-pointer" style="background-color: ${color}" data-color="${color}"></div>
+                    `).join('');
+                    
+                    // Add click event to copy colors
+                    document.querySelectorAll('.color-swatch').forEach(swatch => {
+                        swatch.addEventListener('click', function() {
+                            const color = this.getAttribute('data-color');
+                            navigator.clipboard.writeText(color).then(() => {
+                                showToast();
+                            });
                         });
                     });
-                });
+                }
             }
             
             // Generate brand insights
@@ -793,11 +801,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function extractBrandColors(placeDetails) {
         const colors = new Set();
+        const extractedColors = {
+            fromLogo: [],
+            fromPhotos: [],
+            fromIndustry: []
+        };
         
         try {
             // 1. Try to get colors from business photos
             if (placeDetails.photos && placeDetails.photos.length > 0) {
-                // Get multiple photos for better color sampling
                 const photoPromises = placeDetails.photos.slice(0, 3).map(photo => {
                     return new Promise((resolve) => {
                         const img = new Image();
@@ -813,8 +825,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ctx.drawImage(img, 0, 0);
                                 
                                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                                const sampledColors = sampleDominantColors(imageData);
-                                resolve(sampledColors);
+                                const clusters = kMeansCluster(imageData, 5);
+                                
+                                // Filter for good colors
+                                const goodColors = clusters
+                                    .filter(cluster => isGoodColor(cluster.color))
+                                    .map(cluster => cluster.color);
+                                
+                                resolve(goodColors);
                             } catch (error) {
                                 console.error('Error processing photo:', error);
                                 resolve([]);
@@ -829,53 +847,69 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 const allPhotoColors = await Promise.all(photoPromises);
-                allPhotoColors.flat().forEach(color => {
-                    if (color) colors.add(color);
-                });
+                extractedColors.fromPhotos = allPhotoColors.flat();
             }
             
-            // 2. Try to get colors from logo if we have one
+            // 2. Try to get colors from logo
             const logoUrl = await getBrandLogo(placeDetails);
             if (logoUrl) {
                 try {
                     const logoColors = await extractColorsFromUrl(logoUrl);
-                    if (logoColors && logoColors.length > 0) {
-                        logoColors.forEach(color => {
-                            if (color) colors.add(color);
-                        });
-                    }
+                    extractedColors.fromLogo = logoColors.filter(isGoodColor);
                 } catch (error) {
                     console.error('Error extracting logo colors:', error);
                 }
             }
             
-            // 3. Add industry-specific colors based on business type
+            // 3. Get industry-specific colors
             const businessTypes = placeDetails.types || [];
-            const industryColors = getIndustrySpecificColors(businessTypes);
-            industryColors.forEach(color => colors.add(color));
+            extractedColors.fromIndustry = getIndustrySpecificColors(businessTypes);
             
-            // If we still don't have enough colors, add some defaults
+            // Combine colors with priority
+            const addColorIfGood = (rgb) => {
+                if (isGoodColor(rgb)) {
+                    const hsl = rgbToHsl(...rgb);
+                    colors.add(`hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
+                }
+            };
+            
+            // Add logo colors first (they're most important)
+            extractedColors.fromLogo.forEach(addColorIfGood);
+            
+            // Add photo colors next
+            extractedColors.fromPhotos.forEach(addColorIfGood);
+            
+            // Only add industry colors if we don't have enough
             if (colors.size < 3) {
-                const defaultColors = ['hsl(210, 50%, 40%)', 'hsl(340, 50%, 40%)', 'hsl(120, 30%, 40%)'];
-                defaultColors.forEach(color => colors.add(color));
+                extractedColors.fromIndustry.forEach(addColorIfGood);
             }
+            
+            // Convert to array and check for good contrast
+            let finalColors = Array.from(colors);
+            
+            // Filter colors that don't have good contrast with each other
+            finalColors = finalColors.filter((color1, i) => {
+                return finalColors.every((color2, j) => {
+                    if (i === j) return true;
+                    const contrast = calculateColorContrast(
+                        color1.match(/\d+/g).map(Number),
+                        color2.match(/\d+/g).map(Number)
+                    );
+                    return contrast >= 2; // WCAG AA minimum for large text
+                });
+            });
+            
+            // If we don't have enough good colors, return null
+            if (finalColors.length < 2) {
+                return null;
+            }
+            
+            return finalColors.slice(0, 6);
             
         } catch (error) {
             console.error('Error extracting brand colors:', error);
-            // Return default colors if everything fails
-            return [
-                'hsl(210, 50%, 40%)', // Blue
-                'hsl(340, 50%, 40%)', // Red
-                'hsl(120, 30%, 40%)', // Green
-                'hsl(270, 50%, 40%)', // Purple
-                'hsl(30, 50%, 40%)',  // Orange
-                'hsl(180, 40%, 40%)'  // Teal
-            ];
+            return null;
         }
-        
-        // Convert Set to Array and limit to 6 colors
-        const finalColors = Array.from(colors).slice(0, 6);
-        return finalColors.length > 0 ? finalColors : ['hsl(210, 50%, 40%)']; // Ensure we always return at least one color
     }
 
     function sampleDominantColors(imageData) {
@@ -952,5 +986,123 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         return colorSchemes.default;
+    }
+
+    function kMeansCluster(pixels, k = 5, iterations = 10) {
+        // Initialize centroids randomly from the pixels
+        let centroids = [];
+        const pixelCount = pixels.length / 4; // RGBA data
+        for (let i = 0; i < k; i++) {
+            const randomIndex = Math.floor(Math.random() * pixelCount) * 4;
+            centroids.push([
+                pixels[randomIndex],
+                pixels[randomIndex + 1],
+                pixels[randomIndex + 2]
+            ]);
+        }
+
+        let assignments = new Array(pixelCount).fill(0);
+        
+        // Iterate to find the best clusters
+        for (let iter = 0; iter < iterations; iter++) {
+            // Assign pixels to nearest centroid
+            for (let i = 0; i < pixelCount; i++) {
+                const pixel = [pixels[i * 4], pixels[i * 4 + 1], pixels[i * 4 + 2]];
+                let minDist = Infinity;
+                let bestCluster = 0;
+                
+                for (let j = 0; j < centroids.length; j++) {
+                    const dist = colorDistance(pixel, centroids[j]);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestCluster = j;
+                    }
+                }
+                assignments[i] = bestCluster;
+            }
+            
+            // Update centroids
+            const sums = Array(k).fill().map(() => [0, 0, 0]);
+            const counts = Array(k).fill(0);
+            
+            for (let i = 0; i < pixelCount; i++) {
+                const cluster = assignments[i];
+                sums[cluster][0] += pixels[i * 4];
+                sums[cluster][1] += pixels[i * 4 + 1];
+                sums[cluster][2] += pixels[i * 4 + 2];
+                counts[cluster]++;
+            }
+            
+            for (let i = 0; i < k; i++) {
+                if (counts[i] > 0) {
+                    centroids[i] = [
+                        Math.round(sums[i][0] / counts[i]),
+                        Math.round(sums[i][1] / counts[i]),
+                        Math.round(sums[i][2] / counts[i])
+                    ];
+                }
+            }
+        }
+        
+        // Calculate cluster sizes and sort by popularity
+        const clusterSizes = Array(k).fill(0);
+        assignments.forEach(cluster => clusterSizes[cluster]++);
+        
+        return centroids
+            .map((centroid, i) => ({ color: centroid, size: clusterSizes[i] }))
+            .sort((a, b) => b.size - a.size);
+    }
+
+    function colorDistance(color1, color2) {
+        // Using weighted Euclidean distance in LAB color space would be more accurate
+        // but for performance, using simple RGB distance
+        return Math.sqrt(
+            Math.pow(color1[0] - color2[0], 2) +
+            Math.pow(color1[1] - color2[1], 2) +
+            Math.pow(color1[2] - color2[2], 2)
+        );
+    }
+
+    function isGoodColor(rgb) {
+        const [r, g, b] = rgb;
+        
+        // Skip colors that are too close to white
+        if (r > 240 && g > 240 && b > 240) return false;
+        
+        // Skip colors that are too close to black
+        if (r < 15 && g < 15 && b < 15) return false;
+        
+        // Skip grays (where all channels are too similar)
+        const tolerance = 15;
+        if (Math.abs(r - g) < tolerance && 
+            Math.abs(g - b) < tolerance && 
+            Math.abs(r - b) < tolerance) return false;
+        
+        // Calculate perceived brightness
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        
+        // Skip colors that are too bright or too dark
+        if (brightness < 30 || brightness > 225) return false;
+        
+        return true;
+    }
+
+    function calculateColorContrast(rgb1, rgb2) {
+        // Calculate relative luminance
+        const getLuminance = (r, g, b) => {
+            const [rs, gs, bs] = [r, g, b].map(c => {
+                c = c / 255;
+                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+        };
+        
+        const l1 = getLuminance(...rgb1);
+        const l2 = getLuminance(...rgb2);
+        
+        const lighter = Math.max(l1, l2);
+        const darker = Math.min(l1, l2);
+        
+        return (lighter + 0.05) / (darker + 0.05);
     }
 }); 
