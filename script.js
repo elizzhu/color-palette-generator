@@ -155,148 +155,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Analyze location
-    async function analyzeLocation(location) {
+    async function analyzeLocation() {
+        const locationInput = document.getElementById('locationInput').value;
+        if (!locationInput) {
+            alert('Please enter a location');
+            return;
+        }
+
         try {
-            console.log('Starting location analysis for:', location);
+            const geocoder = new google.maps.Geocoder();
+            const geocodeResult = await geocoder.geocode({ address: locationInput });
             
-            // Update button state
-            analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = `
-                <span>Analyzing Location...</span>
-                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            `;
-
-            // Initialize map for Places service
-            console.log('Initializing map...');
-            const mapElement = document.getElementById('map');
-            if (!mapElement) {
-                throw new Error('Map element not found');
+            if (!geocodeResult.results || geocodeResult.results.length === 0) {
+                throw new Error('Location not found');
             }
 
-            // Make sure map element has dimensions
-            mapElement.style.width = '100px';
-            mapElement.style.height = '100px';
-
+            const location = geocodeResult.results[0];
+            const placeId = location.place_id;
+            
+            // Create a map element for the Places service
+            const mapElement = document.createElement('div');
+            mapElement.style.width = '1px';
+            mapElement.style.height = '1px';
+            document.body.appendChild(mapElement);
+            
+            // Initialize a minimal map
             const map = new google.maps.Map(mapElement, {
-                center: { lat: 0, lng: 0 },
-                zoom: 2
+                center: location.geometry.location,
+                zoom: 15
             });
-
-            console.log('Creating Places service...');
-            const placesService = new google.maps.places.PlacesService(map);
-            if (!placesService) {
-                throw new Error('Failed to create Places service');
-            }
-
-            console.log('Searching for place...');
-            // Search for the place
-            const placeResult = await new Promise((resolve, reject) => {
-                placesService.textSearch(
-                    {
-                        query: location
-                    },
-                    (results, status) => {
-                        console.log('Search status:', status);
-                        console.log('Search results:', results);
-                        
-                        if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
-                            resolve(results[0]);
-                        } else if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-                            reject(new Error('Location not found. Please try a more specific search.'));
-                        } else if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
-                            reject(new Error('Too many requests. Please try again in a few minutes.'));
-                        } else {
-                            reject(new Error(`Error finding location: ${status}`));
-                        }
-                    }
-                );
-            });
-
-            console.log('Getting place details...');
-            // Get place details
+            
+            // Use Places Service to get place details
+            const service = new google.maps.places.PlacesService(map);
             const placeDetails = await new Promise((resolve, reject) => {
-                placesService.getDetails(
-                    {
-                        placeId: placeResult.place_id,
-                        fields: ['name', 'formatted_address', 'photos']
-                    },
-                    (place, status) => {
-                        console.log('Details status:', status);
-                        console.log('Place details:', place);
-                        
-                        if (status === google.maps.places.PlacesServiceStatus.OK) {
-                            resolve(place);
-                        } else {
-                            reject(new Error('Failed to get place details. Please try again.'));
-                        }
+                service.getDetails({ placeId: placeId, fields: ['name', 'photos', 'formatted_address', 'types'] }, (place, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK) {
+                        resolve(place);
+                    } else {
+                        reject(new Error('Failed to get place details'));
                     }
-                );
+                });
             });
 
-            // Get the first photo
+            // Update location name
+            document.getElementById('locationName').textContent = placeDetails.name;
+            document.getElementById('locationAddress').textContent = placeDetails.formatted_address;
+
+            // Handle photos
+            const photosContainer = document.getElementById('locationPhotos');
+            photosContainer.innerHTML = '';
+            
             if (placeDetails.photos && placeDetails.photos.length > 0) {
-                const photo = placeDetails.photos[0];
-                const photoUrl = photo.getUrl({ maxWidth: 800, maxHeight: 600 });
-
-                // Fetch the photo
-                const photoResponse = await fetch(photoUrl);
-                const photoBlob = await photoResponse.blob();
-                const photoClone = new Blob([await photoBlob.arrayBuffer()], { type: 'image/jpeg' });
-
-                // Update preview
-                siteScreenshot.innerHTML = `<img src="${URL.createObjectURL(photoBlob)}" class="w-full h-full object-cover">`;
-                
-                // Extract colors from photo
-                const colors = await extractColorsFromImage(photoClone);
-                generatePaletteFromColors(colors);
-
-                // Generate location-specific insights
-                generateLocationInsights(colors, placeDetails);
+                placeDetails.photos.forEach(photo => {
+                    const img = document.createElement('img');
+                    // Use the photo's getUrl method directly
+                    img.src = photo.getUrl({ maxWidth: 800, maxHeight: 600 });
+                    img.alt = placeDetails.name;
+                    img.className = 'location-photo';
+                    photosContainer.appendChild(img);
+                });
+            } else {
+                photosContainer.innerHTML = '<p>No photos available</p>';
             }
 
-            // Update place info
-            siteName.textContent = placeDetails.name;
-            siteUrl.textContent = placeDetails.formatted_address;
-            websitePreview.classList.remove('hidden');
+            // Update location type
+            const typeElement = document.getElementById('locationType');
+            if (placeDetails.types && placeDetails.types.length > 0) {
+                typeElement.textContent = placeDetails.types[0].replace(/_/g, ' ');
+            } else {
+                typeElement.textContent = 'Unknown type';
+            }
 
-            // Update brand profile
-            brandName.textContent = placeDetails.name;
-            brandDomain.textContent = placeDetails.formatted_address;
-            brandLogo.innerHTML = `
-                <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                </div>
-            `;
-
-            // Show results
-            brandProfile.classList.remove('hidden');
-
-            // Reset button state
-            analyzeBtn.disabled = false;
-            analyzeBtn.innerHTML = `
-                <span>Analyze Location</span>
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                </svg>
-            `;
+            // Clean up the temporary map element
+            document.body.removeChild(mapElement);
 
         } catch (error) {
             console.error('Error analyzing location:', error);
-            alert(error.message || 'Error analyzing location. Please try again.');
-            
-            analyzeBtn.disabled = false;
-            analyzeBtn.innerHTML = `
-                <span>Analyze Location</span>
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                </svg>
-            `;
+            alert('Error analyzing location: ' + error.message);
         }
     }
 
@@ -525,94 +460,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return "Versatile color scheme suitable for multiple industries";
     }
 
-    // Generate location-specific insights
-    function generateLocationInsights(colors, place) {
-        const insights = [
-            {
-                title: 'Location Atmosphere',
-                description: analyzeLocationAtmosphere(colors)
-            },
-            {
-                title: 'Architectural Style',
-                description: analyzeArchitecturalStyle(colors)
-            },
-            {
-                title: 'Visual Identity',
-                description: analyzeVisualIdentity(colors)
-            },
-            {
-                title: 'Cultural Context',
-                description: analyzeCulturalContext(colors, place)
-            }
-        ];
-
-        brandInsights.innerHTML = insights.map(insight => `
-            <div class="bg-[#1A1A1A] rounded-lg p-4">
-                <h4 class="font-semibold mb-2">${insight.title}</h4>
-                <p class="text-gray-400 text-sm">${insight.description}</p>
-            </div>
-        `).join('');
-    }
-
-    // Location analysis functions
-    function analyzeLocationAtmosphere(colors) {
-        const avgLightness = colors.reduce((sum, color) => {
-            const match = color.match(/hsl\(\d+,\s*\d+%,\s*(\d+)%/);
-            return sum + (match ? parseInt(match[1]) : 0);
-        }, 0) / colors.length;
-
-        if (avgLightness > 70) return "Bright and welcoming atmosphere";
-        if (avgLightness < 30) return "Intimate and cozy atmosphere";
-        return "Balanced and comfortable atmosphere";
-    }
-
-    function analyzeArchitecturalStyle(colors) {
-        const dominantHue = parseInt(colors[0].match(/hsl\((\d+)/)[1]);
-        const styles = {
-            modern: [180, 240],    // Blues and teals
-            traditional: [20, 60],  // Warm earth tones
-            industrial: [0, 20],    // Grays and blacks
-            natural: [80, 160]      // Greens and earth tones
-        };
-
-        for (const [style, [min, max]] of Object.entries(styles)) {
-            if (dominantHue >= min && dominantHue <= max) {
-                return `Architectural style suggests a ${style} design approach`;
-            }
-        }
-
-        return "Unique architectural character";
-    }
-
-    function analyzeVisualIdentity(colors) {
-        const avgSaturation = colors.reduce((sum, color) => {
-            const match = color.match(/hsl\(\d+,\s*(\d+)%/);
-            return sum + (match ? parseInt(match[1]) : 0);
-        }, 0) / colors.length;
-
-        if (avgSaturation > 60) return "Bold and distinctive visual identity";
-        if (avgSaturation > 30) return "Balanced and professional visual identity";
-        return "Subtle and sophisticated visual identity";
-    }
-
-    function analyzeCulturalContext(colors, place) {
-        const address = place.formatted_address.toLowerCase();
-        const contexts = {
-            urban: ["city", "street", "avenue", "downtown"],
-            suburban: ["suburb", "neighborhood", "residential"],
-            rural: ["country", "village", "township"],
-            coastal: ["beach", "coast", "shore", "waterfront"]
-        };
-
-        for (const [context, keywords] of Object.entries(contexts)) {
-            if (keywords.some(keyword => address.includes(keyword))) {
-                return `Reflects ${context} cultural influences`;
-            }
-        }
-
-        return "Unique cultural context";
-    }
-
     // Add click event listener
     analyzeBtn.onclick = (e) => {
         e.preventDefault();
@@ -634,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             console.log('Analyzing location...');
-            analyzeLocation(input).catch(err => {
+            analyzeLocation().catch(err => {
                 console.error('Location analysis error:', err);
                 alert('Error analyzing location: ' + err.message);
             });
