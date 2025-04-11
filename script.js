@@ -25,6 +25,9 @@ const API_CONFIG = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded');
+    
+    // Get DOM elements
     const urlInput = document.getElementById('urlInput');
     const analyzeBtn = document.getElementById('analyzeBtn');
     const websitePreview = document.getElementById('websitePreview');
@@ -40,6 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const brandInsights = document.getElementById('brandInsights');
     const typography = document.getElementById('typography');
     const toast = document.getElementById('toast');
+
+    if (!urlInput || !analyzeBtn) {
+        console.error('Critical elements not found:', {
+            urlInput: !!urlInput,
+            analyzeBtn: !!analyzeBtn
+        });
+        return;
+    }
+    
+    console.log('Elements found successfully');
 
     // Analyze website
     async function analyzeWebsite(url) {
@@ -600,76 +613,38 @@ document.addEventListener('DOMContentLoaded', () => {
         return "Unique cultural context";
     }
 
-    // Event listeners
-    analyzeBtn.addEventListener('click', () => {
-        try {
-            console.log('Analyze button clicked');
-            const input = urlInput.value.trim();
-            console.log('Input value:', input);
-            
-            if (input) {
-                // Check if input is a URL or location
-                if (input.startsWith('http://') || input.startsWith('https://')) {
-                    console.log('Analyzing website:', input);
-                    analyzeWebsite(input);
-                } else {
-                    console.log('Analyzing location:', input);
-                    analyzeLocation(input);
-                }
-            } else {
-                console.log('Empty input');
-                alert('Please enter a website URL or location');
-            }
-        } catch (error) {
-            console.error('Error in click handler:', error);
-            alert('An error occurred. Please try again.');
+    // Add click event listener
+    analyzeBtn.onclick = (e) => {
+        e.preventDefault();
+        console.log('Button clicked');
+        
+        const input = urlInput.value.trim();
+        console.log('Input value:', input);
+        
+        if (!input) {
+            alert('Please enter a website URL or location');
+            return;
         }
-    });
 
-    urlInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            const input = urlInput.value.trim();
-            if (input) {
-                if (input.startsWith('http://') || input.startsWith('https://')) {
-                    analyzeWebsite(input);
-                } else {
-                    analyzeLocation(input);
-                }
-            } else {
-                alert('Please enter a website URL or location');
-            }
+        if (input.startsWith('http://') || input.startsWith('https://')) {
+            console.log('Analyzing website...');
+            analyzeWebsite(input).catch(err => {
+                console.error('Website analysis error:', err);
+                alert('Error analyzing website: ' + err.message);
+            });
+        } else {
+            console.log('Analyzing location...');
+            analyzeLocation(input).catch(err => {
+                console.error('Location analysis error:', err);
+                alert('Error analyzing location: ' + err.message);
+            });
         }
-    });
-
-    // Make sure DOM elements are found
-    console.log('DOM loaded');
-    // Verify all elements are found
-    const elements = {
-        urlInput,
-        analyzeBtn,
-        websitePreview,
-        favicon,
-        siteName,
-        siteUrl,
-        siteScreenshot,
-        brandProfile,
-        brandName,
-        brandDomain,
-        brandLogo,
-        palette,
-        brandInsights,
-        typography,
-        toast
     };
 
-    // Check if any elements are null
-    const missingElements = Object.entries(elements)
-        .filter(([name, element]) => !element)
-        .map(([name]) => name);
+    // Also add the original event listener as backup
+    analyzeBtn.addEventListener('click', (e) => {
+        console.log('Button click via addEventListener');
+    });
 
-    if (missingElements.length > 0) {
-        console.error('Missing elements:', missingElements);
-    } else {
-        console.log('All elements found');
-    }
+    console.log('Event listeners attached');
 }); 

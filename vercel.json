@@ -3,7 +3,7 @@
     "name": "brand-generator",
     "builds": [
         {
-            "src": "*.html",
+            "src": "**/*",
             "use": "@vercel/static"
         }
     ],
