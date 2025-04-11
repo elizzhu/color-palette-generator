@@ -143,6 +143,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 </svg>
             `;
 
+            // Enhanced brand analysis
+            const brandPersonality = await analyzeBrandPersonality(validUrl);
+            const brandPatterns = await extractBrandPatterns(validUrl);
+            const brandIcons = await detectBrandIcons(validUrl);
+            const brandMessaging = await analyzeBrandMessaging(validUrl);
+            
+            // Update the brand profile section with enhanced analysis
+            const brandProfileSection = document.getElementById('brandProfile');
+            if (brandProfileSection) {
+                let brandProfileHTML = `
+                    <h3>Brand Personality</h3>
+                    <p>Primary: ${brandPersonality?.primaryPersonality || 'Not detected'}</p>
+                    <div class="tone-analysis">
+                        <h4>Tone Analysis</h4>
+                        <ul>
+                            ${Object.entries(brandPersonality?.toneAnalysis || {}).map(([tone, count]) => 
+                                `<li>${tone}: ${count} mentions</li>`
+                            ).join('')}
+                        </ul>
+                    </div>
+                    
+                    <h3>Brand Messaging</h3>
+                    <div class="messaging-analysis">
+                        <h4>Taglines</h4>
+                        <ul>
+                            ${brandMessaging?.taglines.map(tagline => 
+                                `<li>${tagline}</li>`
+                            ).join('') || '<li>No taglines detected</li>'}
+                        </ul>
+                        
+                        <h4>Value Propositions</h4>
+                        <ul>
+                            ${brandMessaging?.valueProps.map(prop => 
+                                `<li>${prop}</li>`
+                            ).join('') || '<li>No value propositions detected</li>'}
+                        </ul>
+                        
+                        <h4>Calls to Action</h4>
+                        <ul>
+                            ${brandMessaging?.callsToAction.map(cta => 
+                                `<li>${cta}</li>`
+                            ).join('') || '<li>No calls to action detected</li>'}
+                        </ul>
+                    </div>
+                    
+                    <h3>Visual Elements</h3>
+                    <div class="visual-elements">
+                        <h4>Patterns & Textures</h4>
+                        <ul>
+                            ${brandPatterns.map(pattern => 
+                                `<li>${pattern}</li>`
+                            ).join('') || '<li>No patterns detected</li>'}
+                        </ul>
+                        
+                        <h4>Icons & Symbols</h4>
+                        <ul>
+                            ${brandIcons.map(icon => 
+                                `<li>${icon}</li>`
+                            ).join('') || '<li>No icons detected</li>'}
+                        </ul>
+                    </div>
+                `;
+                
+                brandProfileSection.innerHTML = brandProfileHTML;
+            }
+
         } catch (error) {
             console.error('Error analyzing website:', error);
             alert(error.message || 'Error analyzing website. Please try again.');
@@ -1268,6 +1334,131 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error calculating contrast:', error);
             return 1; // Return minimum contrast if calculation fails
+        }
+    }
+
+    // Enhanced brand analysis functions
+    async function analyzeBrandPersonality(websiteUrl) {
+        try {
+            const response = await fetch(websiteUrl);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Analyze content tone
+            const content = doc.body.textContent.toLowerCase();
+            const toneAnalysis = {
+                professional: content.match(/\b(professional|expert|quality|premium)\b/g)?.length || 0,
+                friendly: content.match(/\b(friendly|welcome|help|support)\b/g)?.length || 0,
+                innovative: content.match(/\b(innovative|modern|future|cutting-edge)\b/g)?.length || 0,
+                traditional: content.match(/\b(traditional|heritage|established|classic)\b/g)?.length || 0,
+                luxury: content.match(/\b(luxury|exclusive|premium|elite)\b/g)?.length || 0
+            };
+            
+            // Determine primary personality
+            const maxTone = Object.entries(toneAnalysis).reduce((a, b) => a[1] > b[1] ? a : b);
+            return {
+                primaryPersonality: maxTone[0],
+                toneAnalysis,
+                confidence: maxTone[1] / Object.values(toneAnalysis).reduce((a, b) => a + b, 0)
+            };
+        } catch (error) {
+            console.error('Error analyzing brand personality:', error);
+            return null;
+        }
+    }
+
+    async function extractBrandPatterns(websiteUrl) {
+        try {
+            const response = await fetch(websiteUrl);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Extract background patterns and textures
+            const patterns = new Set();
+            const elements = doc.querySelectorAll('*');
+            elements.forEach(el => {
+                const style = window.getComputedStyle(el);
+                const bgImage = style.backgroundImage;
+                if (bgImage && bgImage !== 'none') {
+                    patterns.add(bgImage);
+                }
+            });
+            
+            return Array.from(patterns);
+        } catch (error) {
+            console.error('Error extracting brand patterns:', error);
+            return [];
+        }
+    }
+
+    async function detectBrandIcons(websiteUrl) {
+        try {
+            const response = await fetch(websiteUrl);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Extract icons and symbols
+            const icons = new Set();
+            const iconElements = doc.querySelectorAll('i, [class*="icon"], [class*="symbol"], svg');
+            iconElements.forEach(el => {
+                if (el.tagName.toLowerCase() === 'svg') {
+                    icons.add(el.outerHTML);
+                } else {
+                    const classes = Array.from(el.classList);
+                    icons.add(classes.join(' '));
+                }
+            });
+            
+            return Array.from(icons);
+        } catch (error) {
+            console.error('Error detecting brand icons:', error);
+            return [];
+        }
+    }
+
+    async function analyzeBrandMessaging(websiteUrl) {
+        try {
+            const response = await fetch(websiteUrl);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Extract key messages
+            const messages = {
+                taglines: [],
+                valueProps: [],
+                callsToAction: []
+            };
+            
+            // Get taglines from h1 and meta description
+            const h1 = doc.querySelector('h1')?.textContent;
+            const metaDesc = doc.querySelector('meta[name="description"]')?.content;
+            if (h1) messages.taglines.push(h1);
+            if (metaDesc) messages.taglines.push(metaDesc);
+            
+            // Get value propositions from headings and paragraphs
+            const headings = doc.querySelectorAll('h2, h3');
+            headings.forEach(h => {
+                if (h.textContent.length < 100) {
+                    messages.valueProps.push(h.textContent);
+                }
+            });
+            
+            // Get calls to action from buttons and links
+            const buttons = doc.querySelectorAll('button, a[class*="btn"], a[class*="cta"]');
+            buttons.forEach(btn => {
+                if (btn.textContent.length < 50) {
+                    messages.callsToAction.push(btn.textContent.trim());
+                }
+            });
+            
+            return messages;
+        } catch (error) {
+            console.error('Error analyzing brand messaging:', error);
+            return null;
         }
     }
 }); 
