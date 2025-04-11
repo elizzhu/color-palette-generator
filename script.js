@@ -757,6 +757,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
+    async function extractColorsFromUrl(url) {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                    const colors = sampleDominantColors(imageData);
+                    resolve(colors);
+                };
+                
+                img.onerror = () => resolve([]);
+                img.src = URL.createObjectURL(blob);
+            });
+        } catch (error) {
+            console.error('Error extracting colors from URL:', error);
+            return [];
+        }
+    }
+
     async function extractBrandColors(placeDetails) {
         const colors = new Set();
         
@@ -791,11 +821,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 allPhotoColors.flat().forEach(color => colors.add(color));
             }
             
-            // 2. Try to get colors from logo
+            // 2. Try to get colors from logo if we have one
             const logoUrl = await getBrandLogo(placeDetails);
             if (logoUrl) {
-                const logoColors = await extractColorsFromUrl(logoUrl);
-                logoColors.forEach(color => colors.add(color));
+                try {
+                    const logoColors = await extractColorsFromUrl(logoUrl);
+                    if (logoColors && logoColors.length > 0) {
+                        logoColors.forEach(color => colors.add(color));
+                    }
+                } catch (error) {
+                    console.error('Error extracting logo colors:', error);
+                }
             }
             
             // 3. Add industry-specific colors based on business type
@@ -803,8 +839,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const industryColors = getIndustrySpecificColors(businessTypes);
             industryColors.forEach(color => colors.add(color));
             
+            // If we still don't have enough colors, add some defaults
+            if (colors.size < 3) {
+                const defaultColors = ['#336699', '#993366', '#669933'];
+                defaultColors.forEach(color => colors.add(color));
+            }
+            
         } catch (error) {
             console.error('Error extracting brand colors:', error);
+            // Return default colors if everything fails
+            return ['#336699', '#993366', '#669933', '#663399', '#996633', '#339966'];
         }
         
         // Convert Set to Array and limit to 6 colors
@@ -812,30 +856,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function sampleDominantColors(imageData) {
-        const colorCounts = {};
-        
-        // Sample pixels at regular intervals
-        for (let i = 0; i < imageData.length; i += 16) {
-            const r = imageData[i];
-            const g = imageData[i + 1];
-            const b = imageData[i + 2];
+        try {
+            const colorCounts = {};
             
-            // Skip white, black, and very gray colors
-            if (Math.abs(r - g) < 10 && Math.abs(g - b) < 10) continue;
+            // Sample pixels at regular intervals
+            for (let i = 0; i < imageData.length; i += 16) {
+                const r = imageData[i];
+                const g = imageData[i + 1];
+                const b = imageData[i + 2];
+                
+                // Skip white, black, and very gray colors
+                if (Math.abs(r - g) < 10 && Math.abs(g - b) < 10) continue;
+                
+                const rgb = `rgb(${r},${g},${b})`;
+                colorCounts[rgb] = (colorCounts[rgb] || 0) + 1;
+            }
             
-            const rgb = `rgb(${r},${g},${b})`;
-            colorCounts[rgb] = (colorCounts[rgb] || 0) + 1;
+            // Convert to HSL and get unique colors
+            return Object.entries(colorCounts)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 10)
+                .map(([color]) => {
+                    const rgb = color.match(/\d+/g).map(Number);
+                    if (!rgb || rgb.length !== 3) return null;
+                    const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+                    return `hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`;
+                })
+                .filter(color => color !== null);
+        } catch (error) {
+            console.error('Error sampling dominant colors:', error);
+            return [];
         }
-        
-        // Convert to HSL and get unique colors
-        return Object.entries(colorCounts)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 10)
-            .map(([color]) => {
-                const rgb = color.match(/\d+/g).map(Number);
-                const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
-                return `hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`;
-            });
     }
 
     function getIndustrySpecificColors(types) {
