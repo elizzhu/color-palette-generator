@@ -55,31 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Elements found successfully');
 
     // Initialize Google Places Autocomplete
-    const autocomplete = new google.maps.places.Autocomplete(urlInput, {
-        types: ['establishment', 'geocode'],
-        componentRestrictions: { country: ['us', 'ca', 'gb', 'au', 'nz'] },
-        fields: ['name', 'formatted_address', 'place_id', 'types']
-    });
-
-    // Add event listener for place selection
-    autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (!place.place_id) {
-            console.log('No place selected');
-            return;
-        }
-        
-        // Update input with formatted address
-        urlInput.value = place.formatted_address;
-        
-        // Enable analyze button
-        analyzeBtn.disabled = false;
-    });
-
-    // Add input event listener to handle manual input
-    urlInput.addEventListener('input', () => {
-        analyzeBtn.disabled = !urlInput.value.trim();
-    });
+    initializeAutocomplete();
 
     // Analyze website
     async function analyzeWebsite(url) {
@@ -185,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function analyzeLocation() {
         const locationInput = document.getElementById('urlInput');
         if (!locationInput || !locationInput.value) {
-            alert('Please enter a location');
+            alert('Please enter a business name');
             return;
         }
 
@@ -203,15 +179,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
 
-            const geocoder = new google.maps.Geocoder();
-            const geocodeResult = await geocoder.geocode({ address: locationInput.value });
-            
-            if (!geocodeResult.results || geocodeResult.results.length === 0) {
-                throw new Error('Location not found');
+            let placeId;
+            // If we have a stored place_id from autocomplete, use it directly
+            if (locationInput.dataset.placeId) {
+                placeId = locationInput.dataset.placeId;
+            } else {
+                // Otherwise, geocode the input value
+                const geocoder = new google.maps.Geocoder();
+                const geocodeResult = await geocoder.geocode({ address: locationInput.value });
+                
+                if (!geocodeResult.results || geocodeResult.results.length === 0) {
+                    throw new Error('Business not found');
+                }
+                placeId = geocodeResult.results[0].place_id;
             }
-
-            const location = geocodeResult.results[0];
-            const placeId = location.place_id;
             
             // Create a map element for the Places service
             const mapElement = document.createElement('div');
@@ -221,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Initialize a minimal map
             const map = new google.maps.Map(mapElement, {
-                center: location.geometry.location,
+                center: { lat: 0, lng: 0 },
                 zoom: 15
             });
             
@@ -229,18 +210,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const service = new google.maps.places.PlacesService(map);
             const placeDetails = await new Promise((resolve, reject) => {
                 service.getDetails({ 
-                    placeId: placeId, 
-                    fields: ['name', 'photos', 'formatted_address', 'types', 'rating', 'reviews', 'website', 'opening_hours', 'icon'] 
+                    placeId: placeId,
+                    fields: ['name', 'photos', 'formatted_address', 'types', 'rating', 'reviews', 'website', 'opening_hours', 'icon', 'business_status'] 
                 }, (place, status) => {
                     if (status === google.maps.places.PlacesServiceStatus.OK) {
                         resolve(place);
                     } else {
-                        reject(new Error('Failed to get place details'));
+                        reject(new Error('Failed to get business details'));
                     }
                 });
             });
 
-            // Update site details
+            // Update site details with business name as primary identifier
             const siteName = document.getElementById('siteName');
             const siteUrl = document.getElementById('siteUrl');
             const siteScreenshot = document.getElementById('siteScreenshot');
@@ -258,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const websitePreview = document.getElementById('websitePreview');
             if (websitePreview) websitePreview.classList.remove('hidden');
             
-            // Update brand profile
+            // Update brand profile with business name
             const brandName = document.getElementById('brandName');
             const brandDomain = document.getElementById('brandDomain');
             const brandLogo = document.getElementById('brandLogo');
@@ -758,4 +739,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     console.log('Event listeners attached');
+
+    function initializeAutocomplete() {
+        const input = document.getElementById('urlInput');
+        const options = {
+            types: ['establishment']  // This restricts results to businesses only
+        };
+        const autocomplete = new google.maps.places.Autocomplete(input, options);
+        
+        // Store the selected place data when user selects from dropdown
+        autocomplete.addListener('place_changed', function() {
+            const place = autocomplete.getPlace();
+            if (place.place_id) {
+                input.dataset.placeId = place.place_id;
+                input.dataset.businessName = place.name;
+            }
+        });
+    }
 }); 
