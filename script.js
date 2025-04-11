@@ -916,6 +916,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update extractBrandColors function to include website colors
     async function extractBrandColors(placeDetails) {
+        if (!placeDetails) {
+            console.error('No place details provided');
+            return null;
+        }
+
         const colors = new Set();
         const extractedColors = {
             fromWebsite: [],
@@ -927,80 +932,126 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // 1. Try to get colors from website first (highest priority)
             if (placeDetails.website) {
-                const websiteColors = await analyzeWebsiteColors(placeDetails.website);
-                extractedColors.fromWebsite = websiteColors;
-                
-                // Add website colors first (highest priority)
-                websiteColors.forEach(rgb => {
-                    if (isGoodColor(rgb)) {
-                        const hsl = rgbToHsl(...rgb);
-                        if (hsl && !hsl.some(isNaN)) {
-                            colors.add(`hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
-                        }
-                    }
-                });
-            }
-            
-            // 2. Try to get colors from logo
-            const logoUrl = await getBrandLogo(placeDetails);
-            if (logoUrl) {
                 try {
-                    const logoColors = await extractColorsFromUrl(logoUrl);
-                    extractedColors.fromLogo = logoColors.filter(isGoodColor);
-                    
-                    // Add logo colors
-                    extractedColors.fromLogo.forEach(rgb => {
-                        if (isGoodColor(rgb)) {
-                            const hsl = rgbToHsl(...rgb);
-                            if (hsl && !hsl.some(isNaN)) {
-                                colors.add(`hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
+                    const websiteColors = await analyzeWebsiteColors(placeDetails.website);
+                    if (websiteColors && Array.isArray(websiteColors)) {
+                        extractedColors.fromWebsite = websiteColors;
+                        
+                        websiteColors.forEach(rgb => {
+                            if (rgb && isGoodColor(rgb)) {
+                                const hsl = rgbToHsl(...rgb);
+                                if (hsl && !hsl.some(isNaN)) {
+                                    colors.add(`hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 } catch (error) {
-                    console.error('Error extracting logo colors:', error);
+                    console.error('Error extracting website colors:', error);
                 }
             }
             
-            // 3. Add photo colors if we still need more
-            if (colors.size < 4 && placeDetails.photos && placeDetails.photos.length > 0) {
-                // ... existing photo color extraction code ...
-            }
-            
-            // 4. Add industry colors only if we have very few colors
-            if (colors.size < 2) {
-                // ... existing industry color code ...
-            }
-            
-            // Convert to array and check for good contrast
-            let finalColors = Array.from(colors);
-            
-            // Filter colors that don't have good contrast with each other
-            finalColors = finalColors.filter((color1, i) => {
-                return finalColors.every((color2, j) => {
-                    if (i === j) return true;
-                    try {
-                        const rgb1 = color1.match(/\d+/g);
-                        const rgb2 = color2.match(/\d+/g);
-                        if (!rgb1 || !rgb2) return true;
-                        const contrast = calculateColorContrast(rgb1, rgb2);
-                        return contrast >= 2;
-                    } catch (error) {
-                        console.error('Error checking contrast:', error);
-                        return true;
+            // 2. Try to get colors from logo
+            try {
+                const logoUrl = await getBrandLogo(placeDetails);
+                if (logoUrl) {
+                    const logoColors = await extractColorsFromUrl(logoUrl);
+                    if (logoColors && Array.isArray(logoColors)) {
+                        extractedColors.fromLogo = logoColors.filter(rgb => rgb && isGoodColor(rgb));
+                        
+                        extractedColors.fromLogo.forEach(rgb => {
+                            if (rgb && isGoodColor(rgb)) {
+                                const hsl = rgbToHsl(...rgb);
+                                if (hsl && !hsl.some(isNaN)) {
+                                    colors.add(`hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
+                                }
+                            }
+                        });
                     }
-                });
-            });
+                }
+            } catch (error) {
+                console.error('Error extracting logo colors:', error);
+            }
             
-            // If we don't have enough good colors, return null
+            // 3. Try photos if we need more colors
+            if (colors.size < 4 && placeDetails.photos && Array.isArray(placeDetails.photos) && placeDetails.photos.length > 0) {
+                try {
+                    const photoUrl = placeDetails.photos[0].getUrl({ maxWidth: 800, maxHeight: 600 });
+                    const photoColors = await extractColorsFromUrl(photoUrl);
+                    if (photoColors && Array.isArray(photoColors)) {
+                        extractedColors.fromPhotos = photoColors.filter(rgb => rgb && isGoodColor(rgb));
+                        
+                        extractedColors.fromPhotos.forEach(rgb => {
+                            if (rgb && isGoodColor(rgb)) {
+                                const hsl = rgbToHsl(...rgb);
+                                if (hsl && !hsl.some(isNaN)) {
+                                    colors.add(`hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
+                                }
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error extracting photo colors:', error);
+                }
+            }
+            
+            // 4. Add industry colors as fallback
+            if (colors.size < 2 && placeDetails.types && Array.isArray(placeDetails.types)) {
+                try {
+                    const industryColors = getIndustrySpecificColors(placeDetails.types);
+                    if (industryColors && Array.isArray(industryColors)) {
+                        extractedColors.fromIndustry = industryColors;
+                        industryColors.forEach(color => {
+                            if (color) {
+                                colors.add(color);
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error adding industry colors:', error);
+                }
+            }
+            
+            // Convert to array and ensure we have valid colors
+            let finalColors = Array.from(colors).filter(color => color && typeof color === 'string');
+            
+            // If we have no colors at all, return null
+            if (finalColors.length === 0) {
+                console.log('No valid colors extracted');
+                return null;
+            }
+            
+            // Filter colors that don't have good contrast
+            try {
+                finalColors = finalColors.filter((color1, i) => {
+                    return finalColors.every((color2, j) => {
+                        if (i === j) return true;
+                        try {
+                            const rgb1 = color1.match(/\d+/g);
+                            const rgb2 = color2.match(/\d+/g);
+                            if (!rgb1 || !rgb2) return true;
+                            const contrast = calculateColorContrast(rgb1, rgb2);
+                            return contrast >= 2;
+                        } catch (error) {
+                            console.error('Error checking contrast:', error);
+                            return true;
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error filtering colors for contrast:', error);
+            }
+            
+            // Return null if we don't have enough good colors
             if (finalColors.length < 2) {
+                console.log('Not enough good colors found');
                 return null;
             }
             
             return finalColors.slice(0, 6);
             
         } catch (error) {
-            console.error('Error extracting brand colors:', error);
+            console.error('Error in extractBrandColors:', error);
             return null;
         }
     }
