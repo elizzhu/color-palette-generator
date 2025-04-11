@@ -251,13 +251,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (brandLogo) {
                 const logoUrl = await getBrandLogo(placeDetails);
                 if (logoUrl) {
-                    brandLogo.innerHTML = `<img src="${logoUrl}" class="max-w-[200px] max-h-[200px] object-contain">`;
+                    brandLogo.innerHTML = `<img src="${logoUrl}" class="w-16 h-16 object-contain">`;
                 } else {
                     // Fallback to default business icon
                     brandLogo.innerHTML = `
-                        <div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
-                            <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+                        <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
                             </svg>
                         </div>
                     `;
@@ -276,17 +277,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (palette) {
                 if (colors === null) {
                     palette.innerHTML = `
-                        <div class="col-span-3 text-center p-4 bg-gray-50 rounded-lg">
-                            <p class="text-gray-500">No colors could be extracted</p>
+                        <div class="bg-[#1A1A1A] rounded-lg p-4 text-center">
+                            <p class="text-gray-400">Unable to extract brand colors. The available images don't contain enough distinct, high-quality colors to generate a meaningful palette.</p>
                         </div>
                     `;
                 } else {
                     palette.innerHTML = colors.map(color => `
-                        <div 
-                            class="color-swatch aspect-square rounded-lg cursor-pointer" 
-                            style="background-color: ${color}" 
-                            data-color="${color}"
-                        ></div>
+                        <div class="color-swatch h-24 rounded-lg cursor-pointer" style="background-color: ${color}" data-color="${color}"></div>
                     `).join('');
                     
                     // Add click event to copy colors
@@ -454,67 +451,81 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Generate color palette
     function generatePaletteFromColors(colors) {
-        if (!colors || !Array.isArray(colors)) {
-            palette.innerHTML = `
-                <div class="col-span-3 text-center p-4 bg-gray-50 rounded-lg">
-                    <p class="text-gray-500">No colors could be extracted</p>
+        palette.innerHTML = '';
+        colors.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch p-4 rounded-lg cursor-pointer';
+            swatch.style.backgroundColor = color;
+            swatch.innerHTML = `
+                <div class="text-sm font-medium text-white text-center">
+                    ${color}
                 </div>
             `;
-            return;
-        }
-
-        palette.innerHTML = colors.map(color => `
-            <div 
-                class="color-swatch aspect-square rounded-lg cursor-pointer" 
-                style="background-color: ${color}" 
-                data-color="${color}"
-            ></div>
-        `).join('');
-
-        // Add click event to copy colors
-        document.querySelectorAll('.color-swatch').forEach(swatch => {
-            swatch.addEventListener('click', function() {
-                const color = this.getAttribute('data-color');
-                navigator.clipboard.writeText(color).then(() => {
-                    showToast();
-                });
+            swatch.addEventListener('click', () => {
+                navigator.clipboard.writeText(color);
+                toast.classList.remove('hidden');
+                setTimeout(() => toast.classList.add('hidden'), 2000);
             });
+            palette.appendChild(swatch);
         });
     }
 
     // Generate brand insights
     function generateBrandInsights(colors) {
         if (!colors || !Array.isArray(colors)) {
-            const defaultTags = ['Professional', 'Reliable', 'Modern', 'Balanced', 'Versatile'];
-            brandInsights.innerHTML = defaultTags.map(tag => `
-                <div class="personality-tag">${tag}</div>
+            // Handle null or invalid colors
+            const defaultInsights = [
+                {
+                    title: 'Color Analysis',
+                    description: 'Unable to analyze colors. Using industry-standard recommendations.'
+                },
+                {
+                    title: 'Brand Personality',
+                    description: 'Professional and reliable brand presence'
+                },
+                {
+                    title: 'Visual Impact',
+                    description: 'Balanced and accessible design approach'
+                },
+                {
+                    title: 'Industry Alignment',
+                    description: 'Versatile design suitable for various industries'
+                }
+            ];
+
+            brandInsights.innerHTML = defaultInsights.map(insight => `
+                <div class="bg-[#1A1A1A] rounded-lg p-4">
+                    <h4 class="font-semibold mb-2">${insight.title}</h4>
+                    <p class="text-gray-400 text-sm">${insight.description}</p>
+                </div>
             `).join('');
             return;
         }
 
-        // Extract personality traits based on color analysis
-        const traits = new Set();
-        
-        // Add color-based traits
-        const colorTraits = analyzeBrandPersonality(colors).split(', ');
-        colorTraits.forEach(trait => traits.add(trait));
+        const insights = [
+            {
+                title: 'Color Harmony',
+                description: analyzeColorHarmony(colors)
+            },
+            {
+                title: 'Brand Personality',
+                description: analyzeBrandPersonality(colors)
+            },
+            {
+                title: 'Visual Impact',
+                description: analyzeVisualImpact(colors)
+            },
+            {
+                title: 'Industry Alignment',
+                description: analyzeIndustryAlignment(colors)
+            }
+        ];
 
-        // Add harmony-based traits
-        const harmonyTrait = analyzeColorHarmony(colors)
-            .split(' - ')[0]
-            .split(' ')[0];
-        traits.add(harmonyTrait);
-
-        // Add impact-based traits
-        const impactTrait = analyzeVisualImpact(colors)
-            .split(' - ')[0]
-            .split(' and ')[0];
-        traits.add(impactTrait);
-
-        // Convert to array and render tags
-        const personalityTags = Array.from(traits);
-        brandInsights.innerHTML = personalityTags.map(tag => `
-            <div class="personality-tag">${tag}</div>
+        brandInsights.innerHTML = insights.map(insight => `
+            <div class="bg-[#1A1A1A] rounded-lg p-4">
+                <h4 class="font-semibold mb-2">${insight.title}</h4>
+                <p class="text-gray-400 text-sm">${insight.description}</p>
+            </div>
         `).join('');
     }
 
@@ -1329,10 +1340,5 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error calculating contrast:', error);
             return 1; // Return minimum contrast if calculation fails
         }
-    }
-
-    // Update the showResults function
-    function showResults() {
-        document.getElementById('results').classList.remove('hidden');
     }
 }); 
