@@ -251,14 +251,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (brandLogo) {
                 const logoUrl = await getBrandLogo(placeDetails);
                 if (logoUrl) {
-                    brandLogo.innerHTML = `<img src="${logoUrl}" class="w-16 h-16 object-contain">`;
+                    brandLogo.innerHTML = `<img src="${logoUrl}" class="max-w-[200px] max-h-[200px] object-contain">`;
                 } else {
                     // Fallback to default business icon
                     brandLogo.innerHTML = `
-                        <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
+                        <div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
+                            <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
                             </svg>
                         </div>
                     `;
@@ -277,13 +276,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (palette) {
                 if (colors === null) {
                     palette.innerHTML = `
-                        <div class="bg-[#1A1A1A] rounded-lg p-4 text-center">
-                            <p class="text-gray-400">Unable to extract brand colors. The available images don't contain enough distinct, high-quality colors to generate a meaningful palette.</p>
+                        <div class="col-span-3 text-center p-4 bg-gray-50 rounded-lg">
+                            <p class="text-gray-500">No colors could be extracted</p>
                         </div>
                     `;
                 } else {
                     palette.innerHTML = colors.map(color => `
-                        <div class="color-swatch h-24 rounded-lg cursor-pointer" style="background-color: ${color}" data-color="${color}"></div>
+                        <div 
+                            class="color-swatch aspect-square rounded-lg cursor-pointer" 
+                            style="background-color: ${color}" 
+                            data-color="${color}"
+                        ></div>
                     `).join('');
                     
                     // Add click event to copy colors
@@ -451,94 +454,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Generate color palette
     function generatePaletteFromColors(colors) {
-        palette.innerHTML = '';
-        colors.forEach(color => {
-            const swatch = document.createElement('div');
-            swatch.className = 'color-swatch p-4 rounded-lg cursor-pointer';
-            swatch.style.backgroundColor = color;
-            swatch.innerHTML = `
-                <div class="text-sm font-medium text-white text-center">
-                    ${color}
+        if (!colors || !Array.isArray(colors)) {
+            palette.innerHTML = `
+                <div class="col-span-3 text-center p-4 bg-gray-50 rounded-lg">
+                    <p class="text-gray-500">No colors could be extracted</p>
                 </div>
             `;
-            swatch.addEventListener('click', () => {
-                navigator.clipboard.writeText(color);
-                toast.classList.remove('hidden');
-                setTimeout(() => toast.classList.add('hidden'), 2000);
+            return;
+        }
+
+        palette.innerHTML = colors.map(color => `
+            <div 
+                class="color-swatch aspect-square rounded-lg cursor-pointer" 
+                style="background-color: ${color}" 
+                data-color="${color}"
+            ></div>
+        `).join('');
+
+        // Add click event to copy colors
+        document.querySelectorAll('.color-swatch').forEach(swatch => {
+            swatch.addEventListener('click', function() {
+                const color = this.getAttribute('data-color');
+                navigator.clipboard.writeText(color).then(() => {
+                    showToast();
+                });
             });
-            palette.appendChild(swatch);
         });
     }
 
     // Generate brand insights
     function generateBrandInsights(colors) {
         if (!colors || !Array.isArray(colors)) {
-            const defaultTraits = ['Friendly', 'Warm', 'Serene', 'Calm', 'Inviting'];
-            const html = defaultTraits.map(trait => `
-                <div class="rounded-full border border-gray-200 px-4 py-2 text-center">
-                    <span class="text-gray-800">${trait}</span>
-                </div>
+            const defaultTags = ['Professional', 'Reliable', 'Modern', 'Balanced', 'Versatile'];
+            brandInsights.innerHTML = defaultTags.map(tag => `
+                <div class="personality-tag">${tag}</div>
             `).join('');
-            brandInsights.innerHTML = html;
             return;
         }
 
-        // Analyze colors to determine personality traits
+        // Extract personality traits based on color analysis
         const traits = new Set();
         
-        // Add traits based on color analysis
-        const avgSaturation = colors.reduce((sum, color) => {
-            const match = color.match(/hsl\(\d+,\s*(\d+)%/);
-            return sum + (match ? parseInt(match[1]) : 0);
-        }, 0) / colors.length;
+        // Add color-based traits
+        const colorTraits = analyzeBrandPersonality(colors).split(', ');
+        colorTraits.forEach(trait => traits.add(trait));
 
-        const avgLightness = colors.reduce((sum, color) => {
-            const match = color.match(/hsl\(\d+,\s*\d+%,\s*(\d+)%/);
-            return sum + (match ? parseInt(match[1]) : 0);
-        }, 0) / colors.length;
+        // Add harmony-based traits
+        const harmonyTrait = analyzeColorHarmony(colors)
+            .split(' - ')[0]
+            .split(' ')[0];
+        traits.add(harmonyTrait);
 
-        // Add traits based on saturation
-        if (avgSaturation > 60) {
-            traits.add('Dynamic');
-            traits.add('Bold');
-            traits.add('Energetic');
-        } else if (avgSaturation > 40) {
-            traits.add('Warm');
-            traits.add('Friendly');
-            traits.add('Inviting');
-        } else if (avgSaturation > 20) {
-            traits.add('Professional');
-            traits.add('Calm');
-            traits.add('Trustworthy');
-        } else {
-            traits.add('Sophisticated');
-            traits.add('Serene');
-            traits.add('Reliable');
-        }
+        // Add impact-based traits
+        const impactTrait = analyzeVisualImpact(colors)
+            .split(' - ')[0]
+            .split(' and ')[0];
+        traits.add(impactTrait);
 
-        // Add traits based on lightness
-        if (avgLightness > 70) {
-            traits.add('Fresh');
-            traits.add('Modern');
-        } else if (avgLightness < 30) {
-            traits.add('Elegant');
-            traits.add('Premium');
-        } else {
-            traits.add('Balanced');
-            traits.add('Approachable');
-        }
-
-        // Convert traits to array and limit to 5
-        const finalTraits = Array.from(traits).slice(0, 5);
-
-        // Generate HTML for traits
-        const html = finalTraits.map(trait => `
-            <div class="rounded-full border border-gray-200 px-4 py-2 text-center">
-                <span class="text-gray-800">${trait}</span>
-            </div>
+        // Convert to array and render tags
+        const personalityTags = Array.from(traits);
+        brandInsights.innerHTML = personalityTags.map(tag => `
+            <div class="personality-tag">${tag}</div>
         `).join('');
-
-        brandInsights.innerHTML = html;
     }
 
     // Generate typography analysis
@@ -1352,5 +1329,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error calculating contrast:', error);
             return 1; // Return minimum contrast if calculation fails
         }
+    }
+
+    // Update the showResults function
+    function showResults() {
+        document.getElementById('results').classList.remove('hidden');
     }
 }); 
