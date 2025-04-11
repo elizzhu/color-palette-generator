@@ -247,24 +247,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (brandName) brandName.textContent = placeDetails.name;
             if (brandDomain) brandDomain.textContent = placeDetails.formatted_address;
             
-            // Try to get the business logo
+            // Get logo using enhanced method
             if (brandLogo) {
-                // First try to use the Google Places icon
-                if (placeDetails.icon) {
-                    brandLogo.innerHTML = `<img src="${placeDetails.icon}" class="w-16 h-16 object-contain">`;
-                } 
-                // If no icon, try to get favicon from website
-                else if (placeDetails.website) {
-                    const domain = new URL(placeDetails.website).hostname;
-                    brandLogo.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=128" class="w-16 h-16 object-contain">`;
-                }
-                // Fallback to location icon
-                else {
+                const logoUrl = await getBrandLogo(placeDetails);
+                if (logoUrl) {
+                    brandLogo.innerHTML = `<img src="${logoUrl}" class="w-16 h-16 object-contain">`;
+                } else {
+                    // Fallback to default business icon
                     brandLogo.innerHTML = `
                         <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
                             <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
                             </svg>
                         </div>
                     `;
@@ -275,93 +269,50 @@ document.addEventListener('DOMContentLoaded', () => {
             const brandProfile = document.getElementById('brandProfile');
             if (brandProfile) brandProfile.classList.remove('hidden');
             
-            // Extract colors and generate palette if photos available
-            if (placeDetails.photos && placeDetails.photos.length > 0) {
-                const photo = placeDetails.photos[0];
-                const img = document.createElement('img');
-                img.crossOrigin = 'Anonymous';
-                img.src = photo.getUrl({ maxWidth: 800, maxHeight: 600 });
+            // Extract brand colors using enhanced method
+            const colors = await extractBrandColors(placeDetails);
+            
+            // Generate palette
+            const palette = document.getElementById('palette');
+            if (palette) {
+                palette.innerHTML = colors.map(color => `
+                    <div class="color-swatch h-24 rounded-lg cursor-pointer" style="background-color: ${color}" data-color="${color}"></div>
+                `).join('');
                 
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    
-                    // Extract colors (simplified for now)
-                    const colors = ['#336699', '#993366', '#669933', '#663399', '#996633'];
-                    
-                    // Generate palette
-                    const palette = document.getElementById('palette');
-                    if (palette) {
-                        palette.innerHTML = colors.map(color => `
-                            <div class="color-swatch h-24 rounded-lg cursor-pointer" style="background-color: ${color}" data-color="${color}"></div>
-                        `).join('');
-                        
-                        // Add click event to copy colors
-                        document.querySelectorAll('.color-swatch').forEach(swatch => {
-                            swatch.addEventListener('click', function() {
-                                const color = this.getAttribute('data-color');
-                                navigator.clipboard.writeText(color).then(() => {
-                                    showToast();
-                                });
-                            });
+                // Add click event to copy colors
+                document.querySelectorAll('.color-swatch').forEach(swatch => {
+                    swatch.addEventListener('click', function() {
+                        const color = this.getAttribute('data-color');
+                        navigator.clipboard.writeText(color).then(() => {
+                            showToast();
                         });
-                    }
-                    
-                    // Generate brand insights
-                    const brandInsights = document.getElementById('brandInsights');
-                    if (brandInsights) {
-                        const insights = [
-                            {
-                                title: 'Location Atmosphere',
-                                description: analyzeLocationAtmosphere(colors, placeDetails)
-                            },
-                            {
-                                title: 'Architectural Style',
-                                description: analyzeArchitecturalStyle(colors, placeDetails)
-                            },
-                            {
-                                title: 'Visual Identity',
-                                description: analyzeVisualIdentity(colors, placeDetails)
-                            },
-                            {
-                                title: 'Cultural Context',
-                                description: analyzeCulturalContext(colors, placeDetails)
-                            }
-                        ];
+                    });
+                });
+            }
+            
+            // Generate brand insights
+            generateBrandInsights(colors);
 
-                        brandInsights.innerHTML = insights.map(insight => `
-                            <div class="bg-[#1A1A1A] rounded-lg p-4">
-                                <h4 class="font-semibold mb-2">${insight.title}</h4>
-                                <p class="text-gray-400 text-sm">${insight.description}</p>
-                            </div>
-                        `).join('');
+            // Generate typography analysis
+            const typography = document.getElementById('typography');
+            if (typography) {
+                const typographyInsights = [
+                    {
+                        title: 'Primary Font',
+                        description: analyzeTypography(placeDetails)
+                    },
+                    {
+                        title: 'Font Hierarchy',
+                        description: 'Based on the location type and atmosphere, a balanced font hierarchy would be recommended.'
                     }
+                ];
 
-                    // Generate typography analysis
-                    const typography = document.getElementById('typography');
-                    if (typography) {
-                        const typographyInsights = [
-                            {
-                                title: 'Primary Font',
-                                description: analyzeTypography(placeDetails)
-                            },
-                            {
-                                title: 'Font Hierarchy',
-                                description: 'Based on the location type and atmosphere, a balanced font hierarchy would be recommended.'
-                            }
-                        ];
-
-                        typography.innerHTML = typographyInsights.map(insight => `
-                            <div class="bg-[#1A1A1A] rounded-lg p-4">
-                                <h4 class="font-semibold mb-2">${insight.title}</h4>
-                                <p class="text-gray-400 text-sm">${insight.description}</p>
-                            </div>
-                        `).join('');
-                    }
-                };
+                typography.innerHTML = typographyInsights.map(insight => `
+                    <div class="bg-[#1A1A1A] rounded-lg p-4">
+                        <h4 class="font-semibold mb-2">${insight.title}</h4>
+                        <p class="text-gray-400 text-sm">${insight.description}</p>
+                    </div>
+                `).join('');
             }
 
             // Clean up the temporary map element
@@ -755,5 +706,159 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.dataset.businessName = place.name;
             }
         });
+    }
+
+    async function getBrandLogo(placeDetails) {
+        // Try multiple sources for logo in order of quality
+        try {
+            // 1. Try to get logo from business website if available
+            if (placeDetails.website) {
+                // Try common logo paths
+                const domain = new URL(placeDetails.website).hostname;
+                const commonLogoPaths = [
+                    `https://${domain}/logo.png`,
+                    `https://${domain}/images/logo.png`,
+                    `https://${domain}/assets/logo.png`,
+                    `https://${domain}/img/logo.png`
+                ];
+                
+                // Try to fetch each path
+                for (const logoPath of commonLogoPaths) {
+                    try {
+                        const response = await fetch(logoPath);
+                        if (response.ok && response.headers.get('content-type').startsWith('image/')) {
+                            return logoPath;
+                        }
+                    } catch (e) {
+                        console.log('Logo path not found:', logoPath);
+                    }
+                }
+                
+                // Fallback to favicon if no logo found
+                return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+            }
+            
+            // 2. Try Google Places icon
+            if (placeDetails.icon) {
+                return placeDetails.icon;
+            }
+            
+            // 3. Try to extract logo from first business photo
+            if (placeDetails.photos && placeDetails.photos.length > 0) {
+                const photo = placeDetails.photos[0];
+                return photo.getUrl({ maxWidth: 800, maxHeight: 600 });
+            }
+
+        } catch (error) {
+            console.error('Error getting brand logo:', error);
+        }
+        
+        // Fallback to generic business icon
+        return null;
+    }
+
+    async function extractBrandColors(placeDetails) {
+        const colors = new Set();
+        
+        try {
+            // 1. Try to get colors from business photos
+            if (placeDetails.photos && placeDetails.photos.length > 0) {
+                // Get multiple photos for better color sampling
+                const photoPromises = placeDetails.photos.slice(0, 3).map(photo => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = 'Anonymous';
+                        img.src = photo.getUrl({ maxWidth: 400, maxHeight: 400 });
+                        
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            ctx.drawImage(img, 0, 0);
+                            
+                            // Sample colors from different parts of the image
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                            const sampledColors = sampleDominantColors(imageData);
+                            resolve(sampledColors);
+                        };
+                        
+                        img.onerror = () => resolve([]);
+                    });
+                });
+                
+                const allPhotoColors = await Promise.all(photoPromises);
+                allPhotoColors.flat().forEach(color => colors.add(color));
+            }
+            
+            // 2. Try to get colors from logo
+            const logoUrl = await getBrandLogo(placeDetails);
+            if (logoUrl) {
+                const logoColors = await extractColorsFromUrl(logoUrl);
+                logoColors.forEach(color => colors.add(color));
+            }
+            
+            // 3. Add industry-specific colors based on business type
+            const businessTypes = placeDetails.types || [];
+            const industryColors = getIndustrySpecificColors(businessTypes);
+            industryColors.forEach(color => colors.add(color));
+            
+        } catch (error) {
+            console.error('Error extracting brand colors:', error);
+        }
+        
+        // Convert Set to Array and limit to 6 colors
+        return Array.from(colors).slice(0, 6);
+    }
+
+    function sampleDominantColors(imageData) {
+        const colorCounts = {};
+        
+        // Sample pixels at regular intervals
+        for (let i = 0; i < imageData.length; i += 16) {
+            const r = imageData[i];
+            const g = imageData[i + 1];
+            const b = imageData[i + 2];
+            
+            // Skip white, black, and very gray colors
+            if (Math.abs(r - g) < 10 && Math.abs(g - b) < 10) continue;
+            
+            const rgb = `rgb(${r},${g},${b})`;
+            colorCounts[rgb] = (colorCounts[rgb] || 0) + 1;
+        }
+        
+        // Convert to HSL and get unique colors
+        return Object.entries(colorCounts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 10)
+            .map(([color]) => {
+                const rgb = color.match(/\d+/g).map(Number);
+                const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+                return `hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`;
+            });
+    }
+
+    function getIndustrySpecificColors(types) {
+        const colorSchemes = {
+            restaurant: ['#FF6B6B', '#4ECDC4', '#45B7D1'],
+            cafe: ['#A0522D', '#8B4513', '#DEB887'],
+            clothing_store: ['#FF69B4', '#20B2AA', '#4682B4'],
+            bank: ['#002D72', '#0033A0', '#003087'],
+            hospital: ['#4682B4', '#20B2AA', '#87CEEB'],
+            school: ['#8B0000', '#4169E1', '#FFD700'],
+            gym: ['#FF4500', '#32CD32', '#1E90FF'],
+            spa: ['#DDA0DD', '#E6E6FA', '#87CEEB'],
+            hotel: ['#800020', '#4B0082', '#FFD700'],
+            default: ['#336699', '#993366', '#669933']
+        };
+        
+        // Find matching business type
+        for (const type of types) {
+            if (colorSchemes[type]) {
+                return colorSchemes[type];
+            }
+        }
+        
+        return colorSchemes.default;
     }
 }); 
