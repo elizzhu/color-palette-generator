@@ -40,94 +40,89 @@
             <p class="text-gray-400">Enter any website URL to analyze its brand identity</p>
         </header>
 
-        <div class="max-w-3xl mx-auto">
-            <!-- URL Input Section -->
-            <div class="mb-8">
-                <div class="bg-[#2D2D2D] rounded-xl p-6">
-                    <div class="flex gap-4">
-                        <input 
-                            type="text" 
-                            id="urlInput" 
-                            placeholder="Enter website URL (e.g., https://example.com)"
-                            class="flex-1 px-4 py-2 rounded-lg bg-[#1A1A1A] border border-[#3D3B47] focus:border-[#E9967A] focus:outline-none"
-                        >
-                        <button 
-                            id="analyzeBtn"
-                            class="px-6 py-2 bg-[#E9967A] hover:bg-[#E8876A] rounded-lg flex items-center space-x-2 transition-colors"
-                        >
-                            <span>Analyze Site</span>
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
+        <div class="max-w-xl mx-auto">
+            <div class="relative">
+                <input 
+                    type="text" 
+                    id="urlInput"
+                    class="w-full px-4 py-3 bg-[#2D2D2D] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter website URL or location..."
+                >
+                <button 
+                    id="analyzeBtn"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2"
+                >
+                    <span>Analyze</span>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </button>
             </div>
+        </div>
 
-            <!-- Website Preview -->
-            <div id="websitePreview" class="mb-8 hidden">
-                <div class="preview-card rounded-xl p-6">
-                    <div class="flex items-center space-x-4 mb-4">
-                        <div id="favicon" class="w-8 h-8 bg-[#1A1A1A] rounded-lg flex items-center justify-center">
-                            <!-- Favicon will be inserted here -->
-                        </div>
-                        <div class="flex-1">
-                            <h3 id="siteName" class="font-semibold"></h3>
-                            <p id="siteUrl" class="text-sm text-gray-400"></p>
-                        </div>
+        <!-- Website Preview -->
+        <div id="websitePreview" class="hidden mt-12">
+            <div class="preview-card rounded-xl p-6">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div id="favicon" class="w-8 h-8 bg-[#1A1A1A] rounded-lg flex items-center justify-center">
+                        <!-- Favicon will be inserted here -->
                     </div>
-                    <div id="siteScreenshot" class="w-full h-48 bg-[#1A1A1A] rounded-lg overflow-hidden">
-                        <!-- Screenshot will be inserted here -->
+                    <div class="flex-1">
+                        <h3 id="siteName" class="font-semibold"></h3>
+                        <p id="siteUrl" class="text-sm text-gray-400"></p>
                     </div>
                 </div>
-            </div>
-
-            <!-- Results Section -->
-            <div id="brandProfile" class="brand-profile rounded-xl p-8 mb-8 hidden">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Brand Identity -->
-                    <div class="space-y-6">
-                        <div class="text-center">
-                            <h2 id="brandName" class="text-2xl font-bold mb-2"></h2>
-                            <p id="brandDomain" class="text-gray-400"></p>
-                        </div>
-                        <div class="flex justify-center">
-                            <div id="brandLogo" class="w-32 h-32 rounded-lg bg-[#2D2D2D] flex items-center justify-center">
-                                <!-- Logo will be inserted here -->
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Color Analysis -->
-                    <div>
-                        <h3 class="text-xl font-semibold mb-4">Brand Colors</h3>
-                        <div id="palette" class="grid grid-cols-3 gap-4">
-                            <!-- Color swatches will be inserted here -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Brand Insights -->
-                <div class="mt-8 pt-8 border-t border-[#3D3B47]">
-                    <h3 class="text-xl font-semibold mb-4">Brand Insights</h3>
-                    <div id="brandInsights" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Insights will be inserted here -->
-                    </div>
-                </div>
-
-                <!-- Typography -->
-                <div class="mt-8 pt-8 border-t border-[#3D3B47]">
-                    <h3 class="text-xl font-semibold mb-4">Typography</h3>
-                    <div id="typography" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Typography analysis will be inserted here -->
-                    </div>
+                <div id="siteScreenshot" class="w-full h-48 bg-[#1A1A1A] rounded-lg overflow-hidden">
+                    <!-- Screenshot will be inserted here -->
                 </div>
             </div>
         </div>
 
-        <!-- Toast Notification -->
-        <div id="toast" class="fixed top-4 right-4 bg-[#3D3B47] text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
-            Color copied to clipboard!
+        <!-- Results Section -->
+        <div id="brandProfile" class="brand-profile rounded-xl p-8 mb-8 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Brand Identity -->
+                <div class="space-y-6">
+                    <div class="text-center">
+                        <h2 id="brandName" class="text-2xl font-bold mb-2"></h2>
+                        <p id="brandDomain" class="text-gray-400"></p>
+                    </div>
+                    <div class="flex justify-center">
+                        <div id="brandLogo" class="w-32 h-32 rounded-lg bg-[#2D2D2D] flex items-center justify-center">
+                            <!-- Logo will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+                <!-- Color Analysis -->
+                <div>
+                    <h3 class="text-xl font-semibold mb-4">Brand Colors</h3>
+                    <div id="palette" class="grid grid-cols-3 gap-4">
+                        <!-- Color swatches will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Brand Insights -->
+            <div class="mt-8 pt-8 border-t border-[#3D3B47]">
+                <h3 class="text-xl font-semibold mb-4">Brand Insights</h3>
+                <div id="brandInsights" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Insights will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Typography -->
+            <div class="mt-8 pt-8 border-t border-[#3D3B47]">
+                <h3 class="text-xl font-semibold mb-4">Typography</h3>
+                <div id="typography" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Typography analysis will be inserted here -->
+                </div>
+            </div>
         </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 bg-[#3D3B47] text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
+        Color copied to clipboard!
     </div>
     <script src="script.js"></script>
 </body>

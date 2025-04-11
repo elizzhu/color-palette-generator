@@ -602,16 +602,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event listeners
     analyzeBtn.addEventListener('click', () => {
-        const input = urlInput.value.trim();
-        if (input) {
-            // Check if input is a URL or location
-            if (input.startsWith('http://') || input.startsWith('https://')) {
-                analyzeWebsite(input);
+        try {
+            console.log('Analyze button clicked');
+            const input = urlInput.value.trim();
+            console.log('Input value:', input);
+            
+            if (input) {
+                // Check if input is a URL or location
+                if (input.startsWith('http://') || input.startsWith('https://')) {
+                    console.log('Analyzing website:', input);
+                    analyzeWebsite(input);
+                } else {
+                    console.log('Analyzing location:', input);
+                    analyzeLocation(input);
+                }
             } else {
-                analyzeLocation(input);
+                console.log('Empty input');
+                alert('Please enter a website URL or location');
             }
-        } else {
-            alert('Please enter a website URL or location');
+        } catch (error) {
+            console.error('Error in click handler:', error);
+            alert('An error occurred. Please try again.');
         }
     });
 
@@ -629,4 +640,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Make sure DOM elements are found
+    console.log('DOM loaded');
+    // Verify all elements are found
+    const elements = {
+        urlInput,
+        analyzeBtn,
+        websitePreview,
+        favicon,
+        siteName,
+        siteUrl,
+        siteScreenshot,
+        brandProfile,
+        brandName,
+        brandDomain,
+        brandLogo,
+        palette,
+        brandInsights,
+        typography,
+        toast
+    };
+
+    // Check if any elements are null
+    const missingElements = Object.entries(elements)
+        .filter(([name, element]) => !element)
+        .map(([name]) => name);
+
+    if (missingElements.length > 0) {
+        console.error('Missing elements:', missingElements);
+    } else {
+        console.log('All elements found');
+    }
 }); 
