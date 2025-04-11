@@ -411,30 +411,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Convert RGB to HSL
     function rgbToHsl(r, g, b) {
-        r /= 255;
-        g /= 255;
-        b /= 255;
-        
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        let h, s, l = (max + min) / 2;
+        try {
+            r /= 255;
+            g /= 255;
+            b /= 255;
 
-        if (max === min) {
-            h = s = 0;
-        } else {
-            const d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-            
-            switch (max) {
-                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                case g: h = (b - r) / d + 2; break;
-                case b: h = (r - g) / d + 4; break;
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max === min) {
+                h = s = 0; // achromatic
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                    default: h = 0;
+                }
+                h /= 6;
             }
-            
-            h /= 6;
-        }
 
-        return [h * 360, s * 100, l * 100];
+            return [h * 360, s * 100, l * 100];
+        } catch (error) {
+            console.error('Error converting RGB to HSL:', error);
+            return [0, 0, 50]; // Return neutral gray as fallback
+        }
     }
 
     // Generate color palette
@@ -801,24 +805,33 @@ document.addEventListener('DOMContentLoaded', () => {
                         img.src = photo.getUrl({ maxWidth: 400, maxHeight: 400 });
                         
                         img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                            ctx.drawImage(img, 0, 0);
-                            
-                            // Sample colors from different parts of the image
-                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                            const sampledColors = sampleDominantColors(imageData);
-                            resolve(sampledColors);
+                            try {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                ctx.drawImage(img, 0, 0);
+                                
+                                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                                const sampledColors = sampleDominantColors(imageData);
+                                resolve(sampledColors);
+                            } catch (error) {
+                                console.error('Error processing photo:', error);
+                                resolve([]);
+                            }
                         };
                         
-                        img.onerror = () => resolve([]);
+                        img.onerror = () => {
+                            console.error('Error loading photo');
+                            resolve([]);
+                        };
                     });
                 });
                 
                 const allPhotoColors = await Promise.all(photoPromises);
-                allPhotoColors.flat().forEach(color => colors.add(color));
+                allPhotoColors.flat().forEach(color => {
+                    if (color) colors.add(color);
+                });
             }
             
             // 2. Try to get colors from logo if we have one
@@ -827,7 +840,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const logoColors = await extractColorsFromUrl(logoUrl);
                     if (logoColors && logoColors.length > 0) {
-                        logoColors.forEach(color => colors.add(color));
+                        logoColors.forEach(color => {
+                            if (color) colors.add(color);
+                        });
                     }
                 } catch (error) {
                     console.error('Error extracting logo colors:', error);
@@ -841,18 +856,26 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // If we still don't have enough colors, add some defaults
             if (colors.size < 3) {
-                const defaultColors = ['#336699', '#993366', '#669933'];
+                const defaultColors = ['hsl(210, 50%, 40%)', 'hsl(340, 50%, 40%)', 'hsl(120, 30%, 40%)'];
                 defaultColors.forEach(color => colors.add(color));
             }
             
         } catch (error) {
             console.error('Error extracting brand colors:', error);
             // Return default colors if everything fails
-            return ['#336699', '#993366', '#669933', '#663399', '#996633', '#339966'];
+            return [
+                'hsl(210, 50%, 40%)', // Blue
+                'hsl(340, 50%, 40%)', // Red
+                'hsl(120, 30%, 40%)', // Green
+                'hsl(270, 50%, 40%)', // Purple
+                'hsl(30, 50%, 40%)',  // Orange
+                'hsl(180, 40%, 40%)'  // Teal
+            ];
         }
         
         // Convert Set to Array and limit to 6 colors
-        return Array.from(colors).slice(0, 6);
+        const finalColors = Array.from(colors).slice(0, 6);
+        return finalColors.length > 0 ? finalColors : ['hsl(210, 50%, 40%)']; // Ensure we always return at least one color
     }
 
     function sampleDominantColors(imageData) {
@@ -868,24 +891,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Skip white, black, and very gray colors
                 if (Math.abs(r - g) < 10 && Math.abs(g - b) < 10) continue;
                 
+                // Ensure we have valid RGB values
+                if (typeof r !== 'number' || typeof g !== 'number' || typeof b !== 'number') continue;
+                if (isNaN(r) || isNaN(g) || isNaN(b)) continue;
+                if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) continue;
+                
                 const rgb = `rgb(${r},${g},${b})`;
                 colorCounts[rgb] = (colorCounts[rgb] || 0) + 1;
             }
             
             // Convert to HSL and get unique colors
-            return Object.entries(colorCounts)
+            const colors = Object.entries(colorCounts)
                 .sort(([, a], [, b]) => b - a)
                 .slice(0, 10)
                 .map(([color]) => {
-                    const rgb = color.match(/\d+/g).map(Number);
-                    if (!rgb || rgb.length !== 3) return null;
-                    const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
-                    return `hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`;
+                    try {
+                        const rgb = color.match(/\d+/g);
+                        if (!rgb || rgb.length !== 3) return null;
+                        
+                        const [r, g, b] = rgb.map(Number);
+                        if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+                        
+                        const hsl = rgbToHsl(r, g, b);
+                        if (!hsl || hsl.some(isNaN)) return null;
+                        
+                        return `hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`;
+                    } catch (error) {
+                        console.error('Error processing color:', error);
+                        return null;
+                    }
                 })
                 .filter(color => color !== null);
+                
+            return colors.length > 0 ? colors : ['hsl(210, 50%, 40%)']; // Return default blue if no colors found
         } catch (error) {
             console.error('Error sampling dominant colors:', error);
-            return [];
+            return ['hsl(210, 50%, 40%)']; // Return default blue
         }
     }
 
