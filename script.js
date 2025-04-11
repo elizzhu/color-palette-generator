@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update screenshot with the first photo if available
             if (siteScreenshot && placeDetails.photos && placeDetails.photos.length > 0) {
                 const photo = placeDetails.photos[0];
-                siteScreenshot.innerHTML = `<img src="${photo.getUrl({ maxWidth: 800, maxHeight: 600 })}" class="w-full h-full object-cover">`;
+                siteScreenshot.innerHTML = `<img src="/api/photo?photoReference=${photo.photo_reference}&maxWidth=800&maxHeight=600" class="w-full h-full object-cover">`;
             }
             
             // Show the website preview
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const photo = placeDetails.photos[0];
                 const img = document.createElement('img');
                 img.crossOrigin = 'Anonymous';
-                img.src = photo.getUrl({ maxWidth: 800, maxHeight: 600 });
+                img.src = `/api/photo?photoReference=${photo.photo_reference}&maxWidth=800&maxHeight=600`;
                 
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
