@@ -54,6 +54,33 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('Elements found successfully');
 
+    // Initialize Google Places Autocomplete
+    const autocomplete = new google.maps.places.Autocomplete(urlInput, {
+        types: ['establishment', 'geocode'],
+        componentRestrictions: { country: ['us', 'ca', 'gb', 'au', 'nz'] },
+        fields: ['name', 'formatted_address', 'place_id', 'types']
+    });
+
+    // Add event listener for place selection
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.place_id) {
+            console.log('No place selected');
+            return;
+        }
+        
+        // Update input with formatted address
+        urlInput.value = place.formatted_address;
+        
+        // Enable analyze button
+        analyzeBtn.disabled = false;
+    });
+
+    // Add input event listener to handle manual input
+    urlInput.addEventListener('input', () => {
+        analyzeBtn.disabled = !urlInput.value.trim();
+    });
+
     // Analyze website
     async function analyzeWebsite(url) {
         try {
@@ -224,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Update screenshot with the first photo if available
             if (siteScreenshot && placeDetails.photos && placeDetails.photos.length > 0) {
                 const photo = placeDetails.photos[0];
-                siteScreenshot.innerHTML = `<img src="/api/photo?photoReference=${photo.photo_reference}&maxWidth=800&maxHeight=600" class="w-full h-full object-cover">`;
+                siteScreenshot.innerHTML = `<img src="${photo.getUrl({ maxWidth: 800, maxHeight: 600 })}" class="w-full h-full object-cover">`;
             }
             
             // Show the website preview
@@ -255,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const photo = placeDetails.photos[0];
                 const img = document.createElement('img');
                 img.crossOrigin = 'Anonymous';
-                img.src = `/api/photo?photoReference=${photo.photo_reference}&maxWidth=800&maxHeight=600`;
+                img.src = photo.getUrl({ maxWidth: 800, maxHeight: 600 });
                 
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
