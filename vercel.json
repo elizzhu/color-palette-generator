@@ -9,10 +9,6 @@
     ],
     "routes": [
         {
-            "src": "/api/photo",
-            "dest": "/api/photo.js"
-        },
-        {
             "src": "/(.*)",
             "dest": "/$1"
         }

@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const placeDetails = await new Promise((resolve, reject) => {
                 service.getDetails({ 
                     placeId: placeId, 
-                    fields: ['name', 'photos', 'formatted_address', 'types', 'rating', 'reviews', 'website', 'opening_hours'] 
+                    fields: ['name', 'photos', 'formatted_address', 'types', 'rating', 'reviews', 'website', 'opening_hours', 'icon'] 
                 }, (place, status) => {
                     if (status === google.maps.places.PlacesServiceStatus.OK) {
                         resolve(place);
@@ -266,16 +266,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (brandName) brandName.textContent = placeDetails.name;
             if (brandDomain) brandDomain.textContent = placeDetails.formatted_address;
             
+            // Try to get the business logo
             if (brandLogo) {
-                brandLogo.innerHTML = `
-                    <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                    </div>
-                `;
+                // First try to use the Google Places icon
+                if (placeDetails.icon) {
+                    brandLogo.innerHTML = `<img src="${placeDetails.icon}" class="w-16 h-16 object-contain">`;
+                } 
+                // If no icon, try to get favicon from website
+                else if (placeDetails.website) {
+                    const domain = new URL(placeDetails.website).hostname;
+                    brandLogo.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=128" class="w-16 h-16 object-contain">`;
+                }
+                // Fallback to location icon
+                else {
+                    brandLogo.innerHTML = `
+                        <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                    `;
+                }
             }
+            
+            // Show brand profile
+            const brandProfile = document.getElementById('brandProfile');
+            if (brandProfile) brandProfile.classList.remove('hidden');
             
             // Extract colors and generate palette if photos available
             if (placeDetails.photos && placeDetails.photos.length > 0) {
@@ -363,10 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         `).join('');
                     }
-                    
-                    // Show brand profile
-                    const brandProfile = document.getElementById('brandProfile');
-                    if (brandProfile) brandProfile.classList.remove('hidden');
                 };
             }
 
