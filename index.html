@@ -3,155 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Brand Profile Generator</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyASBoq7KEiL7E0S5ikNZ7slqYE1opzmrXY&libraries=places"></script>
+    <title>Brand Identity Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyASBoq7KEiL7E0S5ikNZ7slqYE1opzmrXY&libraries=places"></script>
     <style>
+        /* Base styles */
         body {
-            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            color: #1a1a1a;
         }
+
+        /* Google Places Autocomplete styling */
+        .pac-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            margin-top: 4px;
+        }
+
+        .pac-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .pac-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        /* Card styling */
+        .brand-card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .brand-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Color swatch styling */
         .color-swatch {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            cursor: pointer;
             transition: transform 0.2s;
         }
+
         .color-swatch:hover {
             transform: scale(1.05);
         }
-        .brand-profile {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-        }
-        .preview-card {
-            background: rgba(45, 45, 45, 0.5);
-            backdrop-filter: blur(10px);
-        }
-        #map {
-            height: 0;
-            width: 0;
-            position: absolute;
-            visibility: hidden;
-        }
-        /* Google Places Autocomplete styling */
-        .pac-container {
-            background-color: #2D2D2D;
-            border: none;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .pac-item {
-            color: #E5E7EB;
-            padding: 0.5rem 1rem;
-            border-bottom: 1px solid #3D3B47;
-        }
-        .pac-item:hover {
-            background-color: #3D3B47;
-        }
-        .pac-item-query {
-            color: #FFFFFF;
-        }
-        .pac-matched {
-            color: #60A5FA;
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #1a1a1a;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 50;
         }
     </style>
 </head>
-<body class="bg-[#1A1A1A] text-white min-h-screen">
-    <div id="map"></div>
-    <div class="container mx-auto px-4 py-8">
-        <header class="text-center mb-12">
-            <h1 class="text-4xl font-bold mb-2">Business Brand Profile Generator</h1>
-            <p class="text-gray-400 mb-8">Enter any business name to analyze its brand identity</p>
+<body class="min-h-screen bg-white">
+    <div id="map" class="hidden"></div>
+    
+    <main class="container mx-auto px-4 py-12 max-w-5xl">
+        <header class="text-center mb-16">
+            <h1 class="text-4xl font-bold mb-4">Review your brand identity</h1>
+            <p class="text-gray-600">We analyze your business and generate a comprehensive brand profile.</p>
         </header>
 
-        <div class="max-w-xl mx-auto">
+        <div class="max-w-xl mx-auto mb-12">
             <div class="relative">
                 <input 
                     type="text" 
                     id="urlInput"
-                    class="w-full bg-[#1A1A1A] text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter business name (e.g., Starbucks, Apple Store)"
                 >
                 <button 
                     type="button"
                     id="analyzeBtn"
-                    onclick="console.log('Inline click')"
-                    class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2"
                 >
-                    <span>Analyze</span>
+                    <span>Next</span>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
             </div>
         </div>
 
-        <!-- Website Preview -->
-        <div id="websitePreview" class="hidden mt-12">
-            <div class="preview-card rounded-xl p-6">
-                <div class="flex items-center space-x-4 mb-4">
-                    <div id="favicon" class="w-8 h-8 bg-[#1A1A1A] rounded-lg flex items-center justify-center">
-                        <!-- Favicon will be inserted here -->
-                    </div>
-                    <div class="flex-1">
-                        <h3 id="siteName" class="font-semibold"></h3>
-                        <p id="siteUrl" class="text-sm text-gray-400"></p>
-                    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Logo Section -->
+            <section id="websitePreview" class="brand-card p-6 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Logos</h2>
+                    <button class="text-blue-500 hover:text-blue-600 flex items-center space-x-1">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Remix</span>
+                    </button>
                 </div>
-                <div id="siteScreenshot" class="w-full h-48 bg-[#1A1A1A] rounded-lg overflow-hidden">
-                    <!-- Screenshot will be inserted here -->
+                <div class="bg-gray-50 rounded-lg p-8 flex items-center justify-center">
+                    <div id="brandLogo" class="w-32 h-32"></div>
                 </div>
-            </div>
+                <div class="mt-4">
+                    <h3 id="siteName" class="font-semibold"></h3>
+                    <p id="siteUrl" class="text-gray-600 text-sm"></p>
+                </div>
+            </section>
+
+            <!-- Color Palette Section -->
+            <section id="brandProfile" class="brand-card p-6 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Colors</h2>
+                    <button class="text-blue-500 hover:text-blue-600 flex items-center space-x-1">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Remix</span>
+                    </button>
+                </div>
+                <div id="palette" class="grid grid-cols-3 gap-4"></div>
+            </section>
         </div>
 
-        <!-- Results Section -->
-        <div id="brandProfile" class="brand-profile rounded-xl p-8 mb-8 hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Brand Identity -->
-                <div class="space-y-6">
-                    <div class="text-center">
-                        <h2 id="brandName" class="text-2xl font-bold mb-2"></h2>
-                        <p id="brandDomain" class="text-gray-400"></p>
-                    </div>
-                    <div class="flex justify-center">
-                        <div id="brandLogo" class="w-32 h-32 rounded-lg bg-[#2D2D2D] flex items-center justify-center">
-                            <!-- Logo will be inserted here -->
-                        </div>
-                    </div>
-                </div>
-                <!-- Color Analysis -->
-                <div>
-                    <h3 class="text-xl font-semibold mb-4">Brand Colors</h3>
-                    <div id="palette" class="grid grid-cols-3 gap-4">
-                        <!-- Color swatches will be inserted here -->
-                    </div>
-                </div>
+        <!-- Brand Personality Section -->
+        <section class="brand-card p-6 mt-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold">Brand personality</h2>
+                <button class="text-blue-500 hover:text-blue-600 flex items-center space-x-1">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Remix</span>
+                </button>
             </div>
+            <div id="brandInsights" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                <!-- Brand personality traits will be dynamically inserted here -->
+            </div>
+        </section>
 
-            <!-- Brand Insights -->
-            <div class="mt-8 pt-8 border-t border-[#3D3B47]">
-                <h3 class="text-xl font-semibold mb-4">Brand Insights</h3>
-                <div id="brandInsights" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Insights will be inserted here -->
-                </div>
-            </div>
-
-            <!-- Typography -->
-            <div class="mt-8 pt-8 border-t border-[#3D3B47]">
-                <h3 class="text-xl font-semibold mb-4">Typography</h3>
-                <div id="typography" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Typography analysis will be inserted here -->
-                </div>
-            </div>
+        <!-- Toast Notification -->
+        <div id="toast" class="toast hidden">
+            Color copied to clipboard!
         </div>
-    </div>
+    </main>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed top-4 right-4 bg-[#3D3B47] text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
-        Color copied to clipboard!
-    </div>
-
-    <!-- Add debug info -->
-    <div id="debug" class="hidden fixed bottom-4 right-4 bg-black bg-opacity-75 text-white p-4 rounded-lg">
-        <pre id="debugInfo"></pre>
-    </div>
     <script src="script.js"></script>
 </body>
 </html> 

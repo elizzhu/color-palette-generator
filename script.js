@@ -473,60 +473,72 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generate brand insights
     function generateBrandInsights(colors) {
         if (!colors || !Array.isArray(colors)) {
-            // Handle null or invalid colors
-            const defaultInsights = [
-                {
-                    title: 'Color Analysis',
-                    description: 'Unable to analyze colors. Using industry-standard recommendations.'
-                },
-                {
-                    title: 'Brand Personality',
-                    description: 'Professional and reliable brand presence'
-                },
-                {
-                    title: 'Visual Impact',
-                    description: 'Balanced and accessible design approach'
-                },
-                {
-                    title: 'Industry Alignment',
-                    description: 'Versatile design suitable for various industries'
-                }
-            ];
-
-            brandInsights.innerHTML = defaultInsights.map(insight => `
-                <div class="bg-[#1A1A1A] rounded-lg p-4">
-                    <h4 class="font-semibold mb-2">${insight.title}</h4>
-                    <p class="text-gray-400 text-sm">${insight.description}</p>
+            const defaultTraits = ['Friendly', 'Warm', 'Serene', 'Calm', 'Inviting'];
+            const html = defaultTraits.map(trait => `
+                <div class="rounded-full border border-gray-200 px-4 py-2 text-center">
+                    <span class="text-gray-800">${trait}</span>
                 </div>
             `).join('');
+            brandInsights.innerHTML = html;
             return;
         }
 
-        const insights = [
-            {
-                title: 'Color Harmony',
-                description: analyzeColorHarmony(colors)
-            },
-            {
-                title: 'Brand Personality',
-                description: analyzeBrandPersonality(colors)
-            },
-            {
-                title: 'Visual Impact',
-                description: analyzeVisualImpact(colors)
-            },
-            {
-                title: 'Industry Alignment',
-                description: analyzeIndustryAlignment(colors)
-            }
-        ];
+        // Analyze colors to determine personality traits
+        const traits = new Set();
+        
+        // Add traits based on color analysis
+        const avgSaturation = colors.reduce((sum, color) => {
+            const match = color.match(/hsl\(\d+,\s*(\d+)%/);
+            return sum + (match ? parseInt(match[1]) : 0);
+        }, 0) / colors.length;
 
-        brandInsights.innerHTML = insights.map(insight => `
-            <div class="bg-[#1A1A1A] rounded-lg p-4">
-                <h4 class="font-semibold mb-2">${insight.title}</h4>
-                <p class="text-gray-400 text-sm">${insight.description}</p>
+        const avgLightness = colors.reduce((sum, color) => {
+            const match = color.match(/hsl\(\d+,\s*\d+%,\s*(\d+)%/);
+            return sum + (match ? parseInt(match[1]) : 0);
+        }, 0) / colors.length;
+
+        // Add traits based on saturation
+        if (avgSaturation > 60) {
+            traits.add('Dynamic');
+            traits.add('Bold');
+            traits.add('Energetic');
+        } else if (avgSaturation > 40) {
+            traits.add('Warm');
+            traits.add('Friendly');
+            traits.add('Inviting');
+        } else if (avgSaturation > 20) {
+            traits.add('Professional');
+            traits.add('Calm');
+            traits.add('Trustworthy');
+        } else {
+            traits.add('Sophisticated');
+            traits.add('Serene');
+            traits.add('Reliable');
+        }
+
+        // Add traits based on lightness
+        if (avgLightness > 70) {
+            traits.add('Fresh');
+            traits.add('Modern');
+        } else if (avgLightness < 30) {
+            traits.add('Elegant');
+            traits.add('Premium');
+        } else {
+            traits.add('Balanced');
+            traits.add('Approachable');
+        }
+
+        // Convert traits to array and limit to 5
+        const finalTraits = Array.from(traits).slice(0, 5);
+
+        // Generate HTML for traits
+        const html = finalTraits.map(trait => `
+            <div class="rounded-full border border-gray-200 px-4 py-2 text-center">
+                <span class="text-gray-800">${trait}</span>
             </div>
         `).join('');
+
+        brandInsights.innerHTML = html;
     }
 
     // Generate typography analysis
