@@ -201,7 +201,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Use Places Service to get place details
             const service = new google.maps.places.PlacesService(map);
             const placeDetails = await new Promise((resolve, reject) => {
-                service.getDetails({ placeId: placeId, fields: ['name', 'photos', 'formatted_address', 'types'] }, (place, status) => {
+                service.getDetails({ 
+                    placeId: placeId, 
+                    fields: ['name', 'photos', 'formatted_address', 'types', 'rating', 'reviews', 'website', 'opening_hours'] 
+                }, (place, status) => {
                     if (status === google.maps.places.PlacesServiceStatus.OK) {
                         resolve(place);
                     } else {
@@ -280,6 +283,58 @@ document.addEventListener('DOMContentLoaded', () => {
                                 });
                             });
                         });
+                    }
+                    
+                    // Generate brand insights
+                    const brandInsights = document.getElementById('brandInsights');
+                    if (brandInsights) {
+                        const insights = [
+                            {
+                                title: 'Location Atmosphere',
+                                description: analyzeLocationAtmosphere(colors, placeDetails)
+                            },
+                            {
+                                title: 'Architectural Style',
+                                description: analyzeArchitecturalStyle(colors, placeDetails)
+                            },
+                            {
+                                title: 'Visual Identity',
+                                description: analyzeVisualIdentity(colors, placeDetails)
+                            },
+                            {
+                                title: 'Cultural Context',
+                                description: analyzeCulturalContext(colors, placeDetails)
+                            }
+                        ];
+
+                        brandInsights.innerHTML = insights.map(insight => `
+                            <div class="bg-[#1A1A1A] rounded-lg p-4">
+                                <h4 class="font-semibold mb-2">${insight.title}</h4>
+                                <p class="text-gray-400 text-sm">${insight.description}</p>
+                            </div>
+                        `).join('');
+                    }
+
+                    // Generate typography analysis
+                    const typography = document.getElementById('typography');
+                    if (typography) {
+                        const typographyInsights = [
+                            {
+                                title: 'Primary Font',
+                                description: analyzeTypography(placeDetails)
+                            },
+                            {
+                                title: 'Font Hierarchy',
+                                description: 'Based on the location type and atmosphere, a balanced font hierarchy would be recommended.'
+                            }
+                        ];
+
+                        typography.innerHTML = typographyInsights.map(insight => `
+                            <div class="bg-[#1A1A1A] rounded-lg p-4">
+                                <h4 class="font-semibold mb-2">${insight.title}</h4>
+                                <p class="text-gray-400 text-sm">${insight.description}</p>
+                            </div>
+                        `).join('');
                     }
                     
                     // Show brand profile
@@ -543,6 +598,79 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return "Versatile color scheme suitable for multiple industries";
+    }
+
+    // Location analysis functions
+    function analyzeLocationAtmosphere(colors, place) {
+        const avgLightness = colors.reduce((sum, color) => {
+            const match = color.match(/hsl\(\d+,\s*\d+%,\s*(\d+)%/);
+            return sum + (match ? parseInt(match[1]) : 0);
+        }, 0) / colors.length;
+
+        if (avgLightness > 70) return "Bright and welcoming atmosphere";
+        if (avgLightness < 30) return "Intimate and cozy atmosphere";
+        return "Balanced and comfortable atmosphere";
+    }
+
+    function analyzeArchitecturalStyle(colors, place) {
+        const dominantHue = parseInt(colors[0].match(/hsl\((\d+)/)[1]);
+        const styles = {
+            modern: [180, 240],    // Blues and teals
+            traditional: [20, 60],  // Warm earth tones
+            industrial: [0, 20],    // Grays and blacks
+            natural: [80, 160]      // Greens and earth tones
+        };
+
+        for (const [style, [min, max]] of Object.entries(styles)) {
+            if (dominantHue >= min && dominantHue <= max) {
+                return `Architectural style suggests a ${style} design approach`;
+            }
+        }
+
+        return "Unique architectural character";
+    }
+
+    function analyzeVisualIdentity(colors, place) {
+        const avgSaturation = colors.reduce((sum, color) => {
+            const match = color.match(/hsl\(\d+,\s*(\d+)%/);
+            return sum + (match ? parseInt(match[1]) : 0);
+        }, 0) / colors.length;
+
+        if (avgSaturation > 60) return "Bold and distinctive visual identity";
+        if (avgSaturation > 30) return "Balanced and professional visual identity";
+        return "Subtle and sophisticated visual identity";
+    }
+
+    function analyzeCulturalContext(colors, place) {
+        const address = place.formatted_address.toLowerCase();
+        const contexts = {
+            urban: ["city", "street", "avenue", "downtown"],
+            suburban: ["suburb", "neighborhood", "residential"],
+            rural: ["country", "village", "township"],
+            coastal: ["beach", "coast", "shore", "waterfront"]
+        };
+
+        for (const [context, keywords] of Object.entries(contexts)) {
+            if (keywords.some(keyword => address.includes(keyword))) {
+                return `Reflects ${context} cultural influences`;
+            }
+        }
+
+        return "Unique cultural context";
+    }
+
+    function analyzeTypography(place) {
+        const types = place.types || [];
+        if (types.includes('restaurant') || types.includes('cafe')) {
+            return "Elegant serif fonts for a sophisticated dining experience";
+        } else if (types.includes('museum') || types.includes('art_gallery')) {
+            return "Clean sans-serif fonts for a modern, artistic feel";
+        } else if (types.includes('park') || types.includes('natural_feature')) {
+            return "Organic, rounded fonts to complement natural surroundings";
+        } else if (types.includes('shopping_mall') || types.includes('store')) {
+            return "Bold, attention-grabbing fonts for retail appeal";
+        }
+        return "Professional, versatile font selection";
     }
 
     // Function to show the toast notification
