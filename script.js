@@ -163,6 +163,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // Update button state to show loading
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            if (analyzeBtn) {
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = `
+                    <span>Analyzing...</span>
+                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                `;
+            }
+
             const geocoder = new google.maps.Geocoder();
             const geocodeResult = await geocoder.geocode({ address: locationInput.value });
             
@@ -197,41 +210,113 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            // Update location name
-            document.getElementById('locationName').textContent = placeDetails.name;
-            document.getElementById('locationAddress').textContent = placeDetails.formatted_address;
-
-            // Handle photos
-            const photosContainer = document.getElementById('locationPhotos');
-            photosContainer.innerHTML = '';
+            // Update site details
+            const siteName = document.getElementById('siteName');
+            const siteUrl = document.getElementById('siteUrl');
+            const siteScreenshot = document.getElementById('siteScreenshot');
             
-            if (placeDetails.photos && placeDetails.photos.length > 0) {
-                placeDetails.photos.forEach(photo => {
-                    const img = document.createElement('img');
-                    // Use the photo's getUrl method directly
-                    img.src = photo.getUrl({ maxWidth: 800, maxHeight: 600 });
-                    img.alt = placeDetails.name;
-                    img.className = 'location-photo';
-                    photosContainer.appendChild(img);
-                });
-            } else {
-                photosContainer.innerHTML = '<p>No photos available</p>';
+            if (siteName) siteName.textContent = placeDetails.name;
+            if (siteUrl) siteUrl.textContent = placeDetails.formatted_address;
+            
+            // Update screenshot with the first photo if available
+            if (siteScreenshot && placeDetails.photos && placeDetails.photos.length > 0) {
+                const photo = placeDetails.photos[0];
+                siteScreenshot.innerHTML = `<img src="${photo.getUrl({ maxWidth: 800, maxHeight: 600 })}" class="w-full h-full object-cover">`;
             }
-
-            // Update location type
-            const typeElement = document.getElementById('locationType');
-            if (placeDetails.types && placeDetails.types.length > 0) {
-                typeElement.textContent = placeDetails.types[0].replace(/_/g, ' ');
-            } else {
-                typeElement.textContent = 'Unknown type';
+            
+            // Show the website preview
+            const websitePreview = document.getElementById('websitePreview');
+            if (websitePreview) websitePreview.classList.remove('hidden');
+            
+            // Update brand profile
+            const brandName = document.getElementById('brandName');
+            const brandDomain = document.getElementById('brandDomain');
+            const brandLogo = document.getElementById('brandLogo');
+            
+            if (brandName) brandName.textContent = placeDetails.name;
+            if (brandDomain) brandDomain.textContent = placeDetails.formatted_address;
+            
+            if (brandLogo) {
+                brandLogo.innerHTML = `
+                    <div class="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                `;
+            }
+            
+            // Extract colors and generate palette if photos available
+            if (placeDetails.photos && placeDetails.photos.length > 0) {
+                const photo = placeDetails.photos[0];
+                const img = document.createElement('img');
+                img.crossOrigin = 'Anonymous';
+                img.src = photo.getUrl({ maxWidth: 800, maxHeight: 600 });
+                
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Extract colors (simplified for now)
+                    const colors = ['#336699', '#993366', '#669933', '#663399', '#996633'];
+                    
+                    // Generate palette
+                    const palette = document.getElementById('palette');
+                    if (palette) {
+                        palette.innerHTML = colors.map(color => `
+                            <div class="color-swatch h-24 rounded-lg cursor-pointer" style="background-color: ${color}" data-color="${color}"></div>
+                        `).join('');
+                        
+                        // Add click event to copy colors
+                        document.querySelectorAll('.color-swatch').forEach(swatch => {
+                            swatch.addEventListener('click', function() {
+                                const color = this.getAttribute('data-color');
+                                navigator.clipboard.writeText(color).then(() => {
+                                    showToast();
+                                });
+                            });
+                        });
+                    }
+                    
+                    // Show brand profile
+                    const brandProfile = document.getElementById('brandProfile');
+                    if (brandProfile) brandProfile.classList.remove('hidden');
+                };
             }
 
             // Clean up the temporary map element
             document.body.removeChild(mapElement);
+            
+            // Reset button state
+            if (analyzeBtn) {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = `
+                    <span>Analyze</span>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                `;
+            }
 
         } catch (error) {
             console.error('Error analyzing location:', error);
             alert('Error analyzing location: ' + error.message);
+            
+            // Reset button state
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            if (analyzeBtn) {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = `
+                    <span>Analyze</span>
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                `;
+            }
         }
     }
 
@@ -458,6 +543,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return "Versatile color scheme suitable for multiple industries";
+    }
+
+    // Function to show the toast notification
+    function showToast() {
+        const toast = document.getElementById('toast');
+        if (toast) {
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2000);
+        }
     }
 
     // Add click event listener
