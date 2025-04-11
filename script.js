@@ -891,11 +891,16 @@ document.addEventListener('DOMContentLoaded', () => {
             finalColors = finalColors.filter((color1, i) => {
                 return finalColors.every((color2, j) => {
                     if (i === j) return true;
-                    const contrast = calculateColorContrast(
-                        color1.match(/\d+/g).map(Number),
-                        color2.match(/\d+/g).map(Number)
-                    );
-                    return contrast >= 2; // WCAG AA minimum for large text
+                    try {
+                        const rgb1 = color1.match(/\d+/g);
+                        const rgb2 = color2.match(/\d+/g);
+                        if (!rgb1 || !rgb2) return true; // Skip contrast check if color parsing fails
+                        const contrast = calculateColorContrast(rgb1, rgb2);
+                        return contrast >= 2; // WCAG AA minimum for large text
+                    } catch (error) {
+                        console.error('Error checking contrast:', error);
+                        return true; // Skip contrast check on error
+                    }
                 });
             });
             
@@ -1088,21 +1093,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function calculateColorContrast(rgb1, rgb2) {
-        // Calculate relative luminance
-        const getLuminance = (r, g, b) => {
-            const [rs, gs, bs] = [r, g, b].map(c => {
-                c = c / 255;
-                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-            });
-            return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-        };
-        
-        const l1 = getLuminance(...rgb1);
-        const l2 = getLuminance(...rgb2);
-        
-        const lighter = Math.max(l1, l2);
-        const darker = Math.min(l1, l2);
-        
-        return (lighter + 0.05) / (darker + 0.05);
+        try {
+            if (!rgb1 || !rgb2) return 1;
+            
+            // Ensure we have valid RGB values
+            const r1 = parseInt(rgb1[0]);
+            const g1 = parseInt(rgb1[1]);
+            const b1 = parseInt(rgb1[2]);
+            const r2 = parseInt(rgb2[0]);
+            const g2 = parseInt(rgb2[1]);
+            const b2 = parseInt(rgb2[2]);
+            
+            if (isNaN(r1) || isNaN(g1) || isNaN(b1) || isNaN(r2) || isNaN(g2) || isNaN(b2)) {
+                return 1;
+            }
+
+            // Calculate relative luminance
+            const getLuminance = (r, g, b) => {
+                const rs = r / 255;
+                const gs = g / 255;
+                const bs = b / 255;
+                const rsRGB = rs <= 0.03928 ? rs / 12.92 : Math.pow((rs + 0.055) / 1.055, 2.4);
+                const gsRGB = gs <= 0.03928 ? gs / 12.92 : Math.pow((gs + 0.055) / 1.055, 2.4);
+                const bsRGB = bs <= 0.03928 ? bs / 12.92 : Math.pow((bs + 0.055) / 1.055, 2.4);
+                return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
+            };
+            
+            const l1 = getLuminance(r1, g1, b1);
+            const l2 = getLuminance(r2, g2, b2);
+            
+            const lighter = Math.max(l1, l2);
+            const darker = Math.min(l1, l2);
+            
+            return (lighter + 0.05) / (darker + 0.05);
+        } catch (error) {
+            console.error('Error calculating contrast:', error);
+            return 1; // Return minimum contrast if calculation fails
+        }
     }
 }); 
