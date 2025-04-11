@@ -156,15 +156,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Analyze location
     async function analyzeLocation() {
-        const locationInput = document.getElementById('locationInput').value;
-        if (!locationInput) {
+        const locationInput = document.getElementById('urlInput');
+        if (!locationInput || !locationInput.value) {
             alert('Please enter a location');
             return;
         }
 
         try {
             const geocoder = new google.maps.Geocoder();
-            const geocodeResult = await geocoder.geocode({ address: locationInput });
+            const geocodeResult = await geocoder.geocode({ address: locationInput.value });
             
             if (!geocodeResult.results || geocodeResult.results.length === 0) {
                 throw new Error('Location not found');
