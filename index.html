@@ -58,16 +58,16 @@
     <div class="container mx-auto px-4 py-8">
         <header class="text-center mb-12">
             <h1 class="text-4xl font-bold mb-2">Business Brand Profile Generator</h1>
-            <p class="text-gray-400 mb-8">Enter any business name to analyze its brand identity</p>
+            <p class="text-gray-400 mb-8">Enter any business website or name to analyze its brand identity</p>
         </header>
 
-        <div class="max-w-xl mx-auto">
+        <div class="max-w-xl mx-auto mb-12">
             <div class="relative">
                 <input 
                     type="text" 
                     id="urlInput"
                     class="w-full bg-[#1A1A1A] text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter business name (e.g., Starbucks, Apple Store)"
+                    placeholder="E.g. https://business.com/ or Business Name"
                 >
                 <button 
                     type="button"
@@ -83,61 +83,61 @@
             </div>
         </div>
 
-        <!-- Website Preview -->
-        <div id="websitePreview" class="hidden mt-12">
-            <div class="preview-card rounded-xl p-6">
-                <div class="flex items-center space-x-4 mb-4">
-                    <div id="favicon" class="w-8 h-8 bg-[#1A1A1A] rounded-lg flex items-center justify-center">
-                        <!-- Favicon will be inserted here -->
-                    </div>
-                    <div class="flex-1">
-                        <h3 id="siteName" class="font-semibold"></h3>
-                        <p id="siteUrl" class="text-sm text-gray-400"></p>
-                    </div>
-                </div>
-                <div id="siteScreenshot" class="w-full h-48 bg-[#1A1A1A] rounded-lg overflow-hidden">
-                    <!-- Screenshot will be inserted here -->
-                </div>
-            </div>
-        </div>
-
         <!-- Results Section -->
-        <div id="brandProfile" class="brand-profile rounded-xl p-8 mb-8 hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Brand Identity -->
-                <div class="space-y-6">
-                    <div class="text-center">
-                        <h2 id="brandName" class="text-2xl font-bold mb-2"></h2>
-                        <p id="brandDomain" class="text-gray-400"></p>
-                    </div>
-                    <div class="flex justify-center">
-                        <div id="brandLogo" class="w-32 h-32 rounded-lg bg-[#2D2D2D] flex items-center justify-center">
-                            <!-- Logo will be inserted here -->
+        <div id="brandProfile" class="brand-profile rounded-xl p-8 mb-8 hidden max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left Column: Screenshot -->
+                <div class="preview-card rounded-xl p-6">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div id="favicon" class="w-8 h-8 bg-[#1A1A1A] rounded-lg flex items-center justify-center">
+                            <!-- Favicon will be inserted here -->
+                        </div>
+                        <div class="flex-1">
+                            <h3 id="siteName" class="font-semibold"></h3>
+                            <p id="siteUrl" class="text-sm text-gray-400"></p>
                         </div>
                     </div>
-                </div>
-                <!-- Color Analysis -->
-                <div>
-                    <h3 class="text-xl font-semibold mb-4">Brand Colors</h3>
-                    <div id="palette" class="grid grid-cols-3 gap-4">
-                        <!-- Color swatches will be inserted here -->
+                    <div id="siteScreenshot" class="w-full h-[600px] bg-[#1A1A1A] rounded-lg overflow-hidden">
+                        <!-- Screenshot will be inserted here -->
                     </div>
                 </div>
-            </div>
 
-            <!-- Brand Insights -->
-            <div class="mt-8 pt-8 border-t border-[#3D3B47]">
-                <h3 class="text-xl font-semibold mb-4">Brand Insights</h3>
-                <div id="brandInsights" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Insights will be inserted here -->
-                </div>
-            </div>
+                <!-- Right Column: Brand Information -->
+                <div class="space-y-8">
+                    <!-- Brand Identity -->
+                    <div class="text-center mb-8">
+                        <h2 id="brandName" class="text-2xl font-bold mb-2"></h2>
+                        <p id="brandDomain" class="text-gray-400"></p>
+                        <div class="mt-6 flex justify-center">
+                            <div id="brandLogo" class="w-32 h-32 rounded-lg bg-[#2D2D2D] flex items-center justify-center">
+                                <!-- Logo will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
 
-            <!-- Typography -->
-            <div class="mt-8 pt-8 border-t border-[#3D3B47]">
-                <h3 class="text-xl font-semibold mb-4">Typography</h3>
-                <div id="typography" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Typography analysis will be inserted here -->
+                    <!-- Color Analysis -->
+                    <div>
+                        <h3 class="text-xl font-semibold mb-4">Brand Colors</h3>
+                        <div id="palette" class="grid grid-cols-3 gap-4">
+                            <!-- Color swatches will be inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Brand Insights -->
+                    <div class="pt-6 border-t border-[#3D3B47]">
+                        <h3 class="text-xl font-semibold mb-4">Brand Insights</h3>
+                        <div id="brandInsights" class="grid grid-cols-1 gap-4">
+                            <!-- Insights will be inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Typography -->
+                    <div class="pt-6 border-t border-[#3D3B47]">
+                        <h3 class="text-xl font-semibold mb-4">Typography</h3>
+                        <div id="typography" class="grid grid-cols-1 gap-4">
+                            <!-- Typography analysis will be inserted here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

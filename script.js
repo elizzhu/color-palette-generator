@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Get DOM elements
     const urlInput = document.getElementById('urlInput');
     const analyzeBtn = document.getElementById('analyzeBtn');
-    const websitePreview = document.getElementById('websitePreview');
     const favicon = document.getElementById('favicon');
     const siteName = document.getElementById('siteName');
     const siteUrl = document.getElementById('siteUrl');
@@ -114,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
             siteName.textContent = domain.replace(/^www\./, '').split('.')[0].charAt(0).toUpperCase() + 
                                  domain.replace(/^www\./, '').split('.')[0].slice(1);
             siteUrl.textContent = domain;
-            websitePreview.classList.remove('hidden');
 
             // Extract colors from screenshot
             const colors = await extractColorsFromImage(screenshotClone);
