@@ -40,8 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const brandLogo = document.getElementById('brandLogo');
     const palette = document.getElementById('palette');
     const brandInsights = document.getElementById('brandInsights');
-    const typography = document.getElementById('typography');
     const toast = document.getElementById('toast');
+    const businessHours = document.getElementById('businessHours');
 
     if (!urlInput || !analyzeBtn) {
         console.error('Critical elements not found:', {
@@ -108,11 +108,40 @@ document.addEventListener('DOMContentLoaded', () => {
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${validUrl}&sz=128`;
             favicon.innerHTML = `<img src="${faviconUrl}" class="w-6 h-6">`;
 
+            // Extract business hours
+            const hours = await extractBusinessHours(validUrl);
+            
             // Update site info
             const domain = new URL(validUrl).hostname;
             siteName.textContent = domain.replace(/^www\./, '').split('.')[0].charAt(0).toUpperCase() + 
                                  domain.replace(/^www\./, '').split('.')[0].slice(1);
             siteUrl.textContent = domain;
+
+            // Display hours in the dedicated Hours card
+            if (businessHours) {
+                if (hours) {
+                    const hoursLines = hours.split('\n').map(line => line.trim()).filter(line => line);
+                    businessHours.innerHTML = `
+                        <div class="grid grid-cols-1 gap-1">
+                            ${hoursLines.map(line => {
+                                const [day, time] = line.split(':').map(part => part.trim());
+                                return `
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-[var(--square-text)]">${day}</span>
+                                        <span class="text-[var(--square-text-secondary)]">${time}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else {
+                    businessHours.innerHTML = `
+                        <div class="col-span-3 bg-[var(--square-card)] rounded-lg p-4 text-center">
+                            <p class="text-[var(--square-text-secondary)]">Hours information not available.</p>
+                        </div>
+                    `;
+                }
+            }
 
             // Extract colors from screenshot
             const colors = await extractColorsFromImage(screenshotClone);
@@ -125,9 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Generate insights
             generateBrandInsights(colors);
-
-            // Analyze typography (simulated)
-            generateTypographyAnalysis();
 
             // Show results
             brandProfile.classList.remove('hidden');
@@ -223,14 +249,87 @@ document.addEventListener('DOMContentLoaded', () => {
             const siteName = document.getElementById('siteName');
             const siteUrl = document.getElementById('siteUrl');
             const siteScreenshot = document.getElementById('siteScreenshot');
+            const businessHours = document.getElementById('businessHours');
             
             if (siteName) siteName.textContent = placeDetails.name;
             if (siteUrl) siteUrl.textContent = placeDetails.formatted_address;
             
+            // Display hours in the dedicated Hours card
+            if (businessHours) {
+                if (placeDetails.opening_hours) {
+                    businessHours.innerHTML = `
+                        <div class="grid grid-cols-1 gap-1">
+                            ${placeDetails.opening_hours.weekday_text.map(day => `
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[var(--square-text)]">${day.split(': ')[0]}</span>
+                                    <span class="text-[var(--square-text-secondary)]">${day.split(': ')[1]}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    businessHours.innerHTML = `
+                        <div class="col-span-3 bg-[var(--square-card)] rounded-lg p-4 text-center">
+                            <p class="text-[var(--square-text-secondary)]">Hours information not available.</p>
+                        </div>
+                    `;
+                }
+            }
+            
             // Update screenshot with the first photo if available
             if (siteScreenshot && placeDetails.photos && placeDetails.photos.length > 0) {
                 const photo = placeDetails.photos[0];
-                siteScreenshot.innerHTML = `<img src="${photo.getUrl({ maxWidth: 800, maxHeight: 600 })}" class="w-full h-full object-cover">`;
+                const photoUrl = photo.getUrl({ maxWidth: 800, maxHeight: 600 });
+                
+                // Create a new image element with error handling
+                const img = new Image();
+                img.className = 'w-full h-full object-cover';
+                img.alt = `${placeDetails.name} photo`;
+                
+                // Add loading state
+                siteScreenshot.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center bg-[var(--square-card)]">
+                        <svg class="animate-spin h-8 w-8 text-[var(--square-text-secondary)]" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                `;
+                
+                // Handle successful load
+                img.onload = () => {
+                    siteScreenshot.innerHTML = '';
+                    siteScreenshot.appendChild(img);
+                };
+                
+                // Handle error
+                img.onerror = () => {
+                    siteScreenshot.innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center bg-[var(--square-card)]">
+                            <div class="text-center">
+                                <svg class="w-12 h-12 mx-auto text-[var(--square-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <p class="mt-2 text-[var(--square-text-secondary)]">Image not available</p>
+                            </div>
+                        </div>
+                    `;
+                };
+                
+                // Set the source after setting up handlers
+                img.src = photoUrl;
+            } else {
+                // Show placeholder when no photos are available
+                siteScreenshot.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center bg-[var(--square-card)]">
+                        <div class="text-center">
+                            <svg class="w-12 h-12 mx-auto text-[var(--square-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p class="mt-2 text-[var(--square-text-secondary)]">No photos available</p>
+                        </div>
+                    </div>
+                `;
             }
             
             // Show the website preview
@@ -275,8 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (palette) {
                 if (colors === null) {
                     palette.innerHTML = `
-                        <div class="bg-[#1A1A1A] rounded-lg p-4 text-center">
-                            <p class="text-gray-400">Unable to extract brand colors. The available images don't contain enough distinct, high-quality colors to generate a meaningful palette.</p>
+                        <div class="col-span-3 bg-[var(--square-card)] rounded-lg p-4 text-center">
+                            <p class="text-[var(--square-text-secondary)]">Unable to extract brand colors. The available images don't contain enough distinct, high-quality colors to generate a meaningful palette.</p>
                         </div>
                     `;
                 } else {
@@ -298,28 +397,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Generate brand insights
             generateBrandInsights(colors);
-
-            // Generate typography analysis
-            const typography = document.getElementById('typography');
-            if (typography) {
-                const typographyInsights = [
-                    {
-                        title: 'Primary Font',
-                        description: analyzeTypography(placeDetails)
-                    },
-                    {
-                        title: 'Font Hierarchy',
-                        description: 'Based on the location type and atmosphere, a balanced font hierarchy would be recommended.'
-                    }
-                ];
-
-                typography.innerHTML = typographyInsights.map(insight => `
-                    <div class="bg-[#1A1A1A] rounded-lg p-4">
-                        <h4 class="font-semibold mb-2">${insight.title}</h4>
-                        <p class="text-gray-400 text-sm">${insight.description}</p>
-                    </div>
-                `).join('');
-            }
 
             // Clean up the temporary map element
             document.body.removeChild(mapElement);
@@ -396,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .slice(0, 20)
                     .map(([color]) => {
                         const rgb = color.match(/\d+/g).map(Number);
-                        return rgbToHsl(rgb[0], rgb[1], rgb[2]);
+                        return rgbToHsl(...rgb);
                     })
                     .filter((color, index, self) => 
                         index === self.findIndex(c => 
@@ -447,15 +524,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Generate color palette
+    // Add this function after the other utility functions
+    function getContrastingTextColor(backgroundColor) {
+        // Extract RGB values from the color string
+        const rgb = backgroundColor.match(/\d+/g).map(Number);
+        if (!rgb || rgb.length < 3) return { color: '#000000', needsShadow: false }; // Default to black if parsing fails
+        
+        // Calculate relative luminance (perceived brightness)
+        const [r, g, b] = rgb.map(val => {
+            val = val / 255;
+            return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+        });
+        
+        const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        
+        // For very light colors, use black text with shadow
+        if (luminance > 0.85) {
+            return { color: '#000000', needsShadow: true };
+        }
+        // For very dark colors, use white text
+        else if (luminance < 0.15) {
+            return { color: '#FFFFFF', needsShadow: false };
+        }
+        // For medium colors, use contrasting color without shadow
+        else {
+            return { color: luminance > 0.5 ? '#000000' : '#FFFFFF', needsShadow: false };
+        }
+    }
+
+    // Update the generatePaletteFromColors function
     function generatePaletteFromColors(colors) {
         palette.innerHTML = '';
         colors.forEach(color => {
+            const { color: textColor, needsShadow } = getContrastingTextColor(color);
             const swatch = document.createElement('div');
             swatch.className = 'color-swatch p-4 rounded-lg cursor-pointer';
             swatch.style.backgroundColor = color;
             swatch.innerHTML = `
-                <div class="text-sm font-medium text-white text-center">
+                <div class="text-sm font-medium text-center" style="
+                    color: ${textColor};
+                    ${needsShadow ? 'text-shadow: 0 0 4px rgba(0,0,0,0.2), 0 0 2px rgba(0,0,0,0.4);' : ''}
+                ">
                     ${color}
                 </div>
             `;
@@ -470,61 +579,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Generate brand insights
     function generateBrandInsights(colors) {
-        if (!colors || !Array.isArray(colors)) {
-            // Handle null or invalid colors
-            const defaultInsights = [
-                {
-                    title: 'Color Analysis',
-                    description: 'Unable to analyze colors. Using industry-standard recommendations.'
-                },
-                {
-                    title: 'Brand Personality',
-                    description: 'Professional and reliable brand presence'
-                },
-                {
-                    title: 'Visual Impact',
-                    description: 'Balanced and accessible design approach'
-                },
-                {
-                    title: 'Industry Alignment',
-                    description: 'Versatile design suitable for various industries'
-                }
-            ];
+        if (brandInsights) {
+            if (!colors || colors.length < 2) {
+                brandInsights.innerHTML = `
+                    <div class="col-span-3 bg-[var(--square-card)] rounded-lg p-4 text-center">
+                        <p class="text-[var(--square-text-secondary)]">Unable to extract brand insights. The available data doesn't contain enough information to generate meaningful insights.</p>
+                    </div>
+                `;
+            } else {
+                const insights = [
+                    {
+                        title: 'Color Harmony',
+                        description: analyzeColorHarmony(colors)
+                    },
+                    {
+                        title: 'Brand Personality',
+                        description: analyzeBrandPersonality(colors)
+                    },
+                    {
+                        title: 'Visual Impact',
+                        description: analyzeVisualImpact(colors)
+                    },
+                    {
+                        title: 'Industry Alignment',
+                        description: analyzeIndustryAlignment(colors)
+                    }
+                ];
 
-            brandInsights.innerHTML = defaultInsights.map(insight => `
-                <div class="bg-[#1A1A1A] rounded-lg p-4">
-                    <h4 class="font-semibold mb-2">${insight.title}</h4>
-                    <p class="text-gray-400 text-sm">${insight.description}</p>
-                </div>
-            `).join('');
-            return;
-        }
-
-        const insights = [
-            {
-                title: 'Color Harmony',
-                description: analyzeColorHarmony(colors)
-            },
-            {
-                title: 'Brand Personality',
-                description: analyzeBrandPersonality(colors)
-            },
-            {
-                title: 'Visual Impact',
-                description: analyzeVisualImpact(colors)
-            },
-            {
-                title: 'Industry Alignment',
-                description: analyzeIndustryAlignment(colors)
+                brandInsights.innerHTML = insights.map(insight => `
+                    <div class="bg-[var(--square-card)] rounded-lg p-4">
+                        <h4 class="font-semibold mb-2">${insight.title}</h4>
+                        <p class="text-[var(--square-text-secondary)] text-sm">${insight.description}</p>
+                    </div>
+                `).join('');
             }
-        ];
-
-        brandInsights.innerHTML = insights.map(insight => `
-            <div class="bg-[#1A1A1A] rounded-lg p-4">
-                <h4 class="font-semibold mb-2">${insight.title}</h4>
-                <p class="text-gray-400 text-sm">${insight.description}</p>
-            </div>
-        `).join('');
+        }
     }
 
     // Generate typography analysis
@@ -540,12 +629,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         ];
 
-        typography.innerHTML = typographyInsights.map(insight => `
-            <div class="bg-[#1A1A1A] rounded-lg p-4">
-                <h4 class="font-semibold mb-2">${insight.title}</h4>
-                <p class="text-gray-400 text-sm">${insight.description}</p>
+        typography.innerHTML = `
+            <div class="col-span-3 bg-[var(--square-card)] rounded-lg p-4 text-center">
+                <p class="text-[var(--square-text-secondary)]">Unable to analyze typography. The available data doesn't contain enough information to generate meaningful insights.</p>
             </div>
-        `).join('');
+        `;
     }
 
     // Color analysis functions
@@ -775,16 +863,61 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeAutocomplete() {
         const input = document.getElementById('urlInput');
         const options = {
-            types: ['establishment']  // This restricts results to businesses only
+            types: ['establishment']
         };
         const autocomplete = new google.maps.places.Autocomplete(input, options);
         
-        // Store the selected place data when user selects from dropdown
+        // When a place is selected from dropdown or via Enter key
         autocomplete.addListener('place_changed', function() {
             const place = autocomplete.getPlace();
             if (place.place_id) {
                 input.dataset.placeId = place.place_id;
                 input.dataset.businessName = place.name;
+                analyzeLocation();
+            }
+        });
+
+        // Handle Enter key
+        input.addEventListener('keydown', async function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                
+                const pacContainer = document.querySelector('.pac-container');
+                if (pacContainer && pacContainer.style.display !== 'none') {
+                    // Get the first result
+                    const firstResult = pacContainer.querySelector('.pac-item');
+                    if (firstResult) {
+                        // Get the place description from the first result
+                        const placeDescription = firstResult.textContent;
+                        
+                        // Use the Places Service to get the place details
+                        const mapElement = document.createElement('div');
+                        document.body.appendChild(mapElement);
+                        const map = new google.maps.Map(mapElement, {
+                            center: { lat: 0, lng: 0 },
+                            zoom: 1
+                        });
+                        const placesService = new google.maps.places.PlacesService(map);
+                        
+                        // Search for the place
+                        placesService.textSearch({
+                            query: placeDescription
+                        }, function(results, status) {
+                            if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
+                                const firstPlace = results[0];
+                                input.dataset.placeId = firstPlace.place_id;
+                                input.dataset.businessName = firstPlace.name;
+                                input.value = firstPlace.name;
+                                analyzeLocation();
+                            }
+                            document.body.removeChild(mapElement);
+                        });
+                    }
+                } else if (input.value.startsWith('http://') || input.value.startsWith('https://')) {
+                    analyzeWebsite(input.value);
+                } else {
+                    analyzeLocation();
+                }
             }
         });
     }
@@ -1045,19 +1178,23 @@ document.addEventListener('DOMContentLoaded', () => {
             // 3. Try photos if we need more colors
             if (colors.size < 4 && placeDetails.photos && Array.isArray(placeDetails.photos) && placeDetails.photos.length > 0) {
                 try {
-                    const photoUrl = placeDetails.photos[0].getUrl({ maxWidth: 800, maxHeight: 600 });
-                    const photoColors = await extractColorsFromUrl(photoUrl);
-                    if (photoColors && Array.isArray(photoColors)) {
-                        extractedColors.fromPhotos = photoColors.filter(rgb => rgb && isGoodColor(rgb));
-                        
-                        extractedColors.fromPhotos.forEach(rgb => {
-                            if (rgb && isGoodColor(rgb)) {
-                                const hsl = rgbToHsl(...rgb);
-                                if (hsl && !hsl.some(isNaN)) {
-                                    colors.add(`hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
+                    // Select the most representative photo
+                    const selectedPhoto = selectBestPhoto(placeDetails.photos);
+                    if (selectedPhoto) {
+                        const photoUrl = selectedPhoto.getUrl({ maxWidth: 800, maxHeight: 600 });
+                        const photoColors = await extractColorsFromPhoto(photoUrl);
+                        if (photoColors && Array.isArray(photoColors)) {
+                            extractedColors.fromPhotos = photoColors.filter(rgb => rgb && isGoodColor(rgb));
+                            
+                            extractedColors.fromPhotos.forEach(rgb => {
+                                if (rgb && isGoodColor(rgb)) {
+                                    const hsl = rgbToHsl(...rgb);
+                                    if (hsl && !hsl.some(isNaN)) {
+                                        colors.add(`hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
                 } catch (error) {
                     console.error('Error extracting photo colors:', error);
@@ -1122,6 +1259,99 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error in extractBrandColors:', error);
             return null;
+        }
+    }
+
+    // Helper function to select the best photo for color extraction
+    function selectBestPhoto(photos) {
+        if (!photos || photos.length === 0) return null;
+        
+        // Prioritize photos that are likely to contain brand elements
+        const prioritizedPhotos = photos.filter(photo => {
+            const width = photo.width || 0;
+            const height = photo.height || 0;
+            // Prefer photos that are more square or landscape (better for storefronts)
+            return width > height * 0.8;
+        });
+        
+        // If we have prioritized photos, use the first one
+        if (prioritizedPhotos.length > 0) {
+            return prioritizedPhotos[0];
+        }
+        
+        // Otherwise, use the first photo
+        return photos[0];
+    }
+
+    // Enhanced function to extract colors from photos
+    async function extractColorsFromPhoto(url) {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Focus on the top third of the image (where signs and logos often are)
+                    const topThirdHeight = Math.floor(img.height / 3);
+                    const topThirdData = ctx.getImageData(0, 0, img.width, topThirdHeight).data;
+                    
+                    // Also sample from the center (where storefronts often are)
+                    const centerWidth = Math.floor(img.width / 3);
+                    const centerHeight = Math.floor(img.height / 3);
+                    const centerX = Math.floor((img.width - centerWidth) / 2);
+                    const centerY = Math.floor((img.height - centerHeight) / 2);
+                    const centerData = ctx.getImageData(centerX, centerY, centerWidth, centerHeight).data;
+                    
+                    // Combine colors from both regions
+                    const colors = new Set();
+                    
+                    // Process top third
+                    for (let i = 0; i < topThirdData.length; i += 16) {
+                        const r = topThirdData[i];
+                        const g = topThirdData[i + 1];
+                        const b = topThirdData[i + 2];
+                        if (isGoodColor([r, g, b])) {
+                            colors.add(`rgb(${r},${g},${b})`);
+                        }
+                    }
+                    
+                    // Process center
+                    for (let i = 0; i < centerData.length; i += 16) {
+                        const r = centerData[i];
+                        const g = centerData[i + 1];
+                        const b = centerData[i + 2];
+                        if (isGoodColor([r, g, b])) {
+                            colors.add(`rgb(${r},${g},${b})`);
+                        }
+                    }
+                    
+                    // Convert to HSL and filter
+                    const hslColors = Array.from(colors)
+                        .map(color => {
+                            const rgb = color.match(/\d+/g).map(Number);
+                            return rgbToHsl(...rgb);
+                        })
+                        .filter(hsl => hsl && !hsl.some(isNaN))
+                        .map(hsl => `hsl(${Math.round(hsl[0])}, ${Math.round(hsl[1])}%, ${Math.round(hsl[2])}%)`);
+                    
+                    resolve(hslColors);
+                };
+                
+                img.onerror = () => resolve([]);
+                img.src = URL.createObjectURL(blob);
+            });
+        } catch (error) {
+            console.error('Error extracting colors from photo:', error);
+            return [];
         }
     }
 
@@ -1337,6 +1567,120 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error calculating contrast:', error);
             return 1; // Return minimum contrast if calculation fails
+        }
+    }
+
+    // Add this function after the other utility functions
+    async function extractBusinessHours(websiteUrl) {
+        try {
+            // Create a proxy URL to handle CORS
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(websiteUrl)}`;
+            
+            // Fetch the website content
+            const response = await fetch(proxyUrl);
+            const html = await response.text();
+            
+            // Create a temporary DOM to parse the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Common selectors for business hours
+            const hourSelectors = [
+                // Class-based selectors
+                '.hours', '.business-hours', '.store-hours', '.opening-hours',
+                '.hours-of-operation', '.opening-times', '.business-times',
+                '.store-schedule', '.opening-schedule',
+                // ID-based selectors
+                '#hours', '#business-hours', '#store-hours', '#opening-hours',
+                '#hours-of-operation', '#opening-times', '#business-times',
+                // Schema.org markup
+                '[itemprop="openingHours"]', 
+                'time[itemprop="openingHours"]',
+                // Data attributes
+                '[data-hours]', '[data-business-hours]', '[data-store-hours]',
+                // Common patterns
+                '[class*="hours"]', '[id*="hours"]',
+                '[class*="schedule"]', '[id*="schedule"]',
+                // Footer sections
+                'footer [class*="hours"]', 'footer [id*="hours"]',
+                // Contact sections
+                '.contact-info [class*="hours"]', '.contact [class*="hours"]'
+            ];
+            
+            // Try to find hours container
+            let hoursElement = null;
+            for (const selector of hourSelectors) {
+                const element = doc.querySelector(selector);
+                if (element) {
+                    hoursElement = element;
+                    break;
+                }
+            }
+            
+            if (!hoursElement) {
+                // Try searching for text containing days of the week near time patterns
+                const textNodes = [...doc.querySelectorAll('*')].filter(el => {
+                    const text = el.textContent.toLowerCase();
+                    const hasDay = /(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(text);
+                    const hasTime = /(\d{1,2}(?::\d{2})?\s*(?:am|pm)|24\/7|all day|closed)/i.test(text);
+                    return hasDay && hasTime;
+                });
+                
+                if (textNodes.length > 0) {
+                    // Find the most likely container by looking for the element with the most time patterns
+                    hoursElement = textNodes.reduce((best, current) => {
+                        const bestCount = (best.textContent.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)|24\/7|all day|closed)/gi) || []).length;
+                        const currentCount = (current.textContent.match(/(\d{1,2}(?::\d{2})?\s*(?:am|pm)|24\/7|all day|closed)/gi) || []).length;
+                        return currentCount > bestCount ? current : best;
+                    });
+                }
+            }
+            
+            if (hoursElement) {
+                // Clean up the text
+                let hoursText = hoursElement.textContent
+                    .replace(/\s+/g, ' ')
+                    .replace(/\n/g, ' ')
+                    .trim();
+                
+                // Normalize time formats
+                hoursText = hoursText
+                    .replace(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/gi, (match, hour, minute, period) => {
+                        hour = parseInt(hour);
+                        if (period.toLowerCase() === 'pm' && hour < 12) hour += 12;
+                        if (period.toLowerCase() === 'am' && hour === 12) hour = 0;
+                        return `${hour.toString().padStart(2, '0')}:${minute || '00'}`;
+                    });
+                
+                // Split into lines if it contains multiple days
+                if (hoursText.toLowerCase().includes('monday') || 
+                    hoursText.toLowerCase().includes('tuesday')) {
+                    // Format the hours text
+                    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                    let formattedHours = '';
+                    
+                    days.forEach(day => {
+                        const dayRegex = new RegExp(`${day}[^\\n]*`, 'i');
+                        const dayMatch = hoursText.match(dayRegex);
+                        if (dayMatch) {
+                            const dayHours = dayMatch[0]
+                                .replace(day, `${day}:`)
+                                .replace(/\s+/g, ' ')
+                                .trim();
+                            formattedHours += dayHours + '\n';
+                        }
+                    });
+                    
+                    return formattedHours.trim();
+                }
+                
+                return hoursText;
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Error extracting business hours:', error);
+            return null;
         }
     }
 }); 

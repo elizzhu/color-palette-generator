@@ -8,21 +8,33 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --square-bg: #111111;
+            --square-card: #1C1C1C;
+            --square-accent: #006AFF;
+            --square-text: #FFFFFF;
+            --square-text-secondary: #8792A2;
+            --square-border: #2D3548;
+        }
         body {
             font-family: 'Inter', sans-serif;
+            background-color: var(--square-bg);
+            color: var(--square-text);
         }
         .color-swatch {
             transition: transform 0.2s;
+            border: 1px solid var(--square-border);
         }
         .color-swatch:hover {
             transform: scale(1.05);
         }
         .brand-profile {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            background: var(--square-card);
+            border: 1px solid var(--square-border);
         }
         .preview-card {
-            background: rgba(45, 45, 45, 0.5);
-            backdrop-filter: blur(10px);
+            background: var(--square-card);
+            border: 1px solid var(--square-border);
         }
         #map {
             height: 0;
@@ -32,48 +44,75 @@
         }
         /* Google Places Autocomplete styling */
         .pac-container {
-            background-color: #2D2D2D;
-            border: none;
+            background-color: var(--square-card);
+            border: 1px solid var(--square-border);
             border-radius: 0.5rem;
+            margin-top: 0.25rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         .pac-item {
-            color: #E5E7EB;
-            padding: 0.5rem 1rem;
-            border-bottom: 1px solid #3D3B47;
+            color: var(--square-text);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--square-border);
         }
         .pac-item:hover {
-            background-color: #3D3B47;
+            background-color: var(--square-border);
         }
         .pac-item-query {
-            color: #FFFFFF;
+            color: var(--square-text);
         }
         .pac-matched {
-            color: #60A5FA;
+            color: var(--square-accent);
+        }
+        .square-input {
+            background-color: var(--square-card);
+            border: 1px solid var(--square-border);
+            transition: all 0.2s;
+        }
+        .square-input:focus {
+            border-color: var(--square-accent);
+            box-shadow: 0 0 0 2px rgba(0, 106, 255, 0.2);
+        }
+        .square-button {
+            background-color: var(--square-accent);
+            transition: all 0.2s;
+        }
+        .square-button:hover {
+            background-color: #0055CC;
+        }
+        .square-button:focus {
+            box-shadow: 0 0 0 2px rgba(0, 106, 255, 0.2);
+        }
+        .square-heading {
+            letter-spacing: -0.025em;
+        }
+        .square-card {
+            background-color: var(--square-card);
+            border: 1px solid var(--square-border);
+            border-radius: 0.75rem;
         }
     </style>
 </head>
-<body class="bg-[#1A1A1A] text-white min-h-screen">
+<body class="min-h-screen">
     <div id="map"></div>
-    <div class="container mx-auto px-4 py-8">
-        <header class="text-center mb-12">
-            <h1 class="text-4xl font-bold mb-2">Business Brand Profile Generator</h1>
-            <p class="text-gray-400 mb-8">Enter any business website or name to analyze its brand identity</p>
+    <div class="container mx-auto px-4 py-12">
+        <header class="text-center mb-16">
+            <h1 class="text-4xl font-bold mb-3 square-heading">Business Brand Profile Generator</h1>
+            <p class="text-square-text-secondary text-lg">Enter any business website or name to analyze its brand identity</p>
         </header>
 
-        <div class="max-w-xl mx-auto mb-12">
+        <div class="max-w-xl mx-auto mb-16">
             <div class="relative">
                 <input 
                     type="text" 
                     id="urlInput"
-                    class="w-full bg-[#1A1A1A] text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full px-4 py-3.5 rounded-lg focus:outline-none square-input text-base"
                     placeholder="E.g. https://business.com/ or Business Name"
                 >
                 <button 
                     type="button"
                     id="analyzeBtn"
-                    onclick="console.log('Inline click')"
-                    class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center space-x-2"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 square-button text-white px-4 py-2 rounded-lg focus:outline-none flex items-center space-x-2"
                 >
                     <span>Analyze</span>
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,15 +128,15 @@
                 <!-- Left Column: Screenshot -->
                 <div class="preview-card rounded-xl p-6">
                     <div class="flex items-center space-x-4 mb-4">
-                        <div id="favicon" class="w-8 h-8 bg-[#1A1A1A] rounded-lg flex items-center justify-center">
+                        <div id="favicon" class="w-8 h-8 bg-[var(--square-card)] rounded-lg flex items-center justify-center">
                             <!-- Favicon will be inserted here -->
                         </div>
                         <div class="flex-1">
                             <h3 id="siteName" class="font-semibold"></h3>
-                            <p id="siteUrl" class="text-sm text-gray-400"></p>
+                            <p id="siteUrl" class="text-[var(--square-text-secondary)] text-sm"></p>
                         </div>
                     </div>
-                    <div id="siteScreenshot" class="w-full h-[600px] bg-[#1A1A1A] rounded-lg overflow-hidden">
+                    <div id="siteScreenshot" class="w-full h-[600px] bg-[var(--square-card)] rounded-lg overflow-hidden">
                         <!-- Screenshot will be inserted here -->
                     </div>
                 </div>
@@ -106,36 +145,36 @@
                 <div class="space-y-8">
                     <!-- Brand Identity -->
                     <div class="text-center mb-8">
-                        <h2 id="brandName" class="text-2xl font-bold mb-2"></h2>
-                        <p id="brandDomain" class="text-gray-400"></p>
+                        <h2 id="brandName" class="text-2xl font-bold mb-2 square-heading"></h2>
+                        <p id="brandDomain" class="text-[var(--square-text-secondary)]"></p>
                         <div class="mt-6 flex justify-center">
-                            <div id="brandLogo" class="w-32 h-32 rounded-lg bg-[#2D2D2D] flex items-center justify-center">
+                            <div id="brandLogo" class="w-32 h-32 rounded-lg bg-white flex items-center justify-center border border-[var(--square-border)] p-4">
                                 <!-- Logo will be inserted here -->
                             </div>
                         </div>
                     </div>
 
                     <!-- Color Analysis -->
-                    <div>
-                        <h3 class="text-xl font-semibold mb-4">Brand Colors</h3>
+                    <div class="square-card p-6">
+                        <h3 class="text-xl font-semibold mb-4 square-heading">Brand Colors</h3>
                         <div id="palette" class="grid grid-cols-3 gap-4">
                             <!-- Color swatches will be inserted here -->
                         </div>
                     </div>
 
                     <!-- Brand Insights -->
-                    <div class="pt-6 border-t border-[#3D3B47]">
-                        <h3 class="text-xl font-semibold mb-4">Brand Insights</h3>
+                    <div class="square-card p-6">
+                        <h3 class="text-xl font-semibold mb-4 square-heading">Brand Insights</h3>
                         <div id="brandInsights" class="grid grid-cols-1 gap-4">
                             <!-- Insights will be inserted here -->
                         </div>
                     </div>
 
-                    <!-- Typography -->
-                    <div class="pt-6 border-t border-[#3D3B47]">
-                        <h3 class="text-xl font-semibold mb-4">Typography</h3>
-                        <div id="typography" class="grid grid-cols-1 gap-4">
-                            <!-- Typography analysis will be inserted here -->
+                    <!-- Hours -->
+                    <div class="square-card p-6">
+                        <h3 class="text-xl font-semibold mb-4 square-heading">Hours</h3>
+                        <div id="businessHours" class="grid grid-cols-1 gap-4">
+                            <!-- Hours will be inserted here -->
                         </div>
                     </div>
                 </div>
@@ -144,7 +183,7 @@
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed top-4 right-4 bg-[#3D3B47] text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
+    <div id="toast" class="fixed top-4 right-4 bg-[var(--square-card)] text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden border border-[var(--square-border)]">
         Color copied to clipboard!
     </div>
 
