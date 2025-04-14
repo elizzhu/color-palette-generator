@@ -8,20 +8,26 @@ const INSTAGRAM_API_CONFIG = {
 
 // API Configuration
 const API_CONFIG = {
-    screenshotApiKey: 'mji7Vyz7XA5bUQ',
+    screenshotApiKey: 'Naknv_sclLxWSg',
     screenshotApiUrl: 'https://api.screenshotone.com/take',
     screenshotParams: {
+        access_key: 'Naknv_sclLxWSg',
+        viewport_width: 1280,
+        viewport_height: 800,
+        device_scale_factor: 1,
         format: 'jpg',
+        quality: 85,
+        full_page: false,
         block_ads: true,
         block_cookie_banners: true,
-        block_banners_by_heuristics: false,
         block_trackers: true,
-        delay: 0,
-        timeout: 60,
-        response_type: 'by_format',
-        image_quality: 80
+        cache: true,
+        fresh: false,
+        hide_cookie_banners: true,
+        delay: 2,
+        timeout: 20
     },
-    googleMapsApiKey: 'AIzaSyASBoq7KEiL7E0S5ikNZ7slqYE1opzmrXY' // Updated Google Maps API key
+    googleMapsApiKey: 'AIzaSyASBoq7KEiL7E0S5ikNZ7slqYE1opzmrXY'
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,9 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Get DOM elements
     const urlInput = document.getElementById('urlInput');
     const analyzeBtn = document.getElementById('analyzeBtn');
-    const favicon = document.getElementById('favicon');
-    const siteName = document.getElementById('siteName');
-    const siteUrl = document.getElementById('siteUrl');
     const siteScreenshot = document.getElementById('siteScreenshot');
     const brandProfile = document.getElementById('brandProfile');
     const brandName = document.getElementById('brandName');
@@ -56,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize Google Places Autocomplete
     initializeAutocomplete();
 
-    // Analyze website
+    // Update website analysis function
     async function analyzeWebsite(url) {
         try {
             // Validate URL
@@ -80,42 +83,76 @@ document.addEventListener('DOMContentLoaded', () => {
                 </svg>
             `;
 
-            // Create API endpoint URL
-            const apiUrl = new URL(API_CONFIG.screenshotApiUrl);
-            apiUrl.searchParams.append('access_key', API_CONFIG.screenshotApiKey);
-            apiUrl.searchParams.append('url', validUrl);
-            
-            // Add additional parameters
-            Object.entries(API_CONFIG.screenshotParams).forEach(([key, value]) => {
-                apiUrl.searchParams.append(key, value);
-            });
-
             // Get website screenshot
-            const screenshot = await fetch(apiUrl.toString());
-            if (!screenshot.ok) {
-                const errorData = await screenshot.json();
-                throw new Error(errorData.message || 'Failed to capture website screenshot');
-            }
-
-            // Clone the response for color extraction
-            const screenshotBlob = await screenshot.blob();
-            const screenshotClone = new Blob([await screenshotBlob.arrayBuffer()], { type: 'image/jpeg' });
-
-            // Update website preview
-            siteScreenshot.innerHTML = `<img src="${URL.createObjectURL(screenshotBlob)}" class="w-full h-full object-cover">`;
+            console.log('Attempting to capture screenshot for:', validUrl);
             
-            // Get favicon
+            // Construct the API URL with minimal required parameters
+            const screenshotUrl = `https://api.screenshotone.com/take?access_key=${API_CONFIG.screenshotApiKey}&url=${encodeURIComponent(validUrl)}&format=jpg&viewport_width=1280&viewport_height=800&cache=false`;
+            
+            console.log('Making request to:', screenshotUrl);
+            
+            let colors = [];
+            try {
+                const response = await fetch(screenshotUrl);
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error:', errorText);
+                    throw new Error(`Screenshot API error: ${response.status} ${errorText}`);
+                }
+                
+                const imageBlob = await response.blob();
+                console.log('Received blob:', imageBlob.type, imageBlob.size, 'bytes');
+                
+                if (imageBlob.size === 0) {
+                    throw new Error('Received empty image response');
+                }
+                
+                const imageUrl = URL.createObjectURL(imageBlob);
+                siteScreenshot.innerHTML = `
+                    <img src="${imageUrl}" 
+                         class="w-full h-full object-cover" 
+                         alt="Website screenshot"
+                         onerror="console.error('Image failed to load')"
+                         onload="console.log('Image loaded successfully')">
+                `;
+                
+                // Extract colors from the screenshot
+                colors = await extractColorsFromImage(imageBlob);
+                generatePaletteFromColors(colors);
+                
+            } catch (error) {
+                console.error('Screenshot capture failed:', error);
+                siteScreenshot.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center bg-[var(--square-card)]">
+                        <div class="text-center p-4">
+                            <svg class="w-12 h-12 mx-auto text-[var(--square-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <p class="mt-2 text-[var(--square-text-secondary)]">Failed to capture screenshot: ${error.message}</p>
+                        </div>
+                    </div>
+                `;
+                colors = [];
+            }
+            
+            // Get favicon URL for the logo
             const faviconUrl = `https://www.google.com/s2/favicons?domain=${validUrl}&sz=128`;
-            favicon.innerHTML = `<img src="${faviconUrl}" class="w-6 h-6">`;
 
             // Extract business hours
             const hours = await extractBusinessHours(validUrl);
             
             // Update site info
             const domain = new URL(validUrl).hostname;
-            siteName.textContent = domain.replace(/^www\./, '').split('.')[0].charAt(0).toUpperCase() + 
-                                 domain.replace(/^www\./, '').split('.')[0].slice(1);
-            siteUrl.textContent = domain;
+            const siteName = domain.replace(/^www\./, '').split('.')[0].charAt(0).toUpperCase() + 
+                           domain.replace(/^www\./, '').split('.')[0].slice(1);
+
+            // Update brand profile
+            brandName.textContent = siteName;
+            brandDomain.textContent = domain;
+            brandLogo.innerHTML = `<img src="${faviconUrl}" class="w-16 h-16">`;
 
             // Display hours in the dedicated Hours card
             if (businessHours) {
@@ -142,15 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
                 }
             }
-
-            // Extract colors from screenshot
-            const colors = await extractColorsFromImage(screenshotClone);
-            generatePaletteFromColors(colors);
-
-            // Update brand profile
-            brandName.textContent = siteName.textContent;
-            brandDomain.textContent = domain;
-            brandLogo.innerHTML = `<img src="${faviconUrl}" class="w-16 h-16">`;
 
             // Generate insights
             generateBrandInsights(colors);
@@ -563,7 +591,12 @@ document.addEventListener('DOMContentLoaded', () => {
             swatch.innerHTML = `
                 <div class="text-sm font-medium text-center" style="
                     color: ${textColor};
-                    ${needsShadow ? 'text-shadow: 0 0 4px rgba(0,0,0,0.2), 0 0 2px rgba(0,0,0,0.4);' : ''}
+                    text-shadow: 
+                        0 1px 1px rgba(0,0,0,0.2),
+                        0 -1px 1px rgba(0,0,0,0.2),
+                        1px 0 1px rgba(0,0,0,0.2),
+                        -1px 0 1px rgba(0,0,0,0.2),
+                        0 0 3px rgba(0,0,0,0.15);
                 ">
                     ${color}
                 </div>
